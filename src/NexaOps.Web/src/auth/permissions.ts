@@ -51,6 +51,19 @@ export const Permissions = {
   problemWorkNoteRead: 'problem.worknote.read',
   problemLinkIncident: 'problem.link_incident',
 
+  changeRead: 'change.read',
+  changeCreate: 'change.create',
+  changeUpdate: 'change.update',
+  changeAssign: 'change.assign',
+  changeSchedule: 'change.schedule',
+  changeImplement: 'change.implement',
+  changeReview: 'change.review',
+  changeClose: 'change.close',
+  changeCancel: 'change.cancel',
+  changeCommentCreate: 'change.comment.create',
+  changeWorkNoteRead: 'change.worknote.read',
+  changeRaiseEmergency: 'change.raise_emergency',
+
   approvalAct: 'approval.act',
   approvalReadAll: 'approval.read.all',
 

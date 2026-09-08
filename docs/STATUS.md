@@ -163,6 +163,9 @@ These appear in the navigation marked **"Later"** and are not clickable. Nothing
 Knowledge base, CMDB, asset management, the visual workflow engine, reporting and dashboard
 builder, settings, virtual agent, mobile apps, inbound email, third-party integrations.
 
+Problems and Changes have list and record pages; neither has a create form in the UI yet, so
+raising one goes through the API. Every other operation on them is available in the browser.
+
 The foundation they share — tenancy, identity, permissions, audit, notifications, attachments,
 number sequences, module-agnostic `RecordRelations`, and now module-agnostic approvals — is built
 and tested. `Category` carries a `Module` discriminator, and Phase 2 exercised all of it without

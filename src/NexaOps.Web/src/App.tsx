@@ -21,6 +21,8 @@ import { RequestDetailPage } from '@/features/requests/RequestDetailPage';
 import { ApprovalsPage } from '@/features/approvals/ApprovalsPage';
 import { ProblemListPage } from '@/features/problems/ProblemListPage';
 import { ProblemDetailPage } from '@/features/problems/ProblemDetailPage';
+import { ChangeListPage } from '@/features/changes/ChangeListPage';
+import { ChangeDetailPage } from '@/features/changes/ChangeDetailPage';
 import { AuditPage } from '@/features/audit/AuditPage';
 import { NotFoundPage } from '@/features/NotFoundPage';
 
@@ -152,6 +154,24 @@ export function App() {
             element={
               <RequireAuth permission={Permissions.problemRead}>
                 <ProblemDetailPage />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="changes"
+            element={
+              <RequireAuth permission={Permissions.changeRead}>
+                <ChangeListPage />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="changes/:id"
+            element={
+              <RequireAuth permission={Permissions.changeRead}>
+                <ChangeDetailPage />
               </RequireAuth>
             }
           />

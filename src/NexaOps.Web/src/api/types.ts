@@ -870,3 +870,111 @@ export interface RecordFindingsRequest {
   workaround?: string;
   permanentFix?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Change management
+// ---------------------------------------------------------------------------
+
+export type ChangeType = 'Standard' | 'Normal' | 'Emergency';
+
+export type ChangeStatus =
+  | 'Draft'
+  | 'Assessing'
+  | 'AwaitingApproval'
+  | 'Scheduled'
+  | 'Implementing'
+  | 'Review'
+  | 'Closed'
+  | 'Rejected'
+  | 'Cancelled';
+
+export type ChangeRisk = 'Low' | 'Medium' | 'High' | 'VeryHigh';
+
+export type ChangeOutcome = 'Successful' | 'SuccessfulWithIssues' | 'Failed' | 'RolledBack';
+
+export interface ChangeSummary {
+  id: string;
+  number: string;
+  title: string;
+  type: ChangeType;
+  status: ChangeStatus;
+  risk: ChangeRisk;
+  priority: Priority;
+  outcome?: ChangeOutcome | null;
+  assignedToUserId?: string | null;
+  assignedToName?: string | null;
+  assignedToAvatarColor?: string | null;
+  assignmentGroupId?: string | null;
+  assignmentGroupName?: string | null;
+  plannedStartAt?: string | null;
+  plannedEndAt?: string | null;
+  requiresDowntime: boolean;
+  createdAt: string;
+}
+
+export interface ChangeDetail {
+  id: string;
+  number: string;
+  title: string;
+  description: string;
+  type: ChangeType;
+  status: ChangeStatus;
+  risk: ChangeRisk;
+  impact: string;
+  priority: Priority;
+  implementationPlan?: string | null;
+  rollbackPlan?: string | null;
+  testPlan?: string | null;
+  impactAssessment?: string | null;
+  plannedStartAt?: string | null;
+  plannedEndAt?: string | null;
+  actualStartAt?: string | null;
+  actualEndAt?: string | null;
+  requiresDowntime: boolean;
+  assignmentGroupId?: string | null;
+  assignmentGroupName?: string | null;
+  assignedToUserId?: string | null;
+  assignedToName?: string | null;
+  requestedByUserId: string;
+  requestedByName: string;
+  categoryId?: string | null;
+  categoryName?: string | null;
+  problemId?: string | null;
+  problemNumber?: string | null;
+  outcome?: ChangeOutcome | null;
+  reviewNotes?: string | null;
+  rejectionReason?: string | null;
+  cancellationReason?: string | null;
+  approvedAt?: string | null;
+  reviewedAt?: string | null;
+  closedAt?: string | null;
+  createdAt: string;
+  approvals: Approval[];
+  collidingChanges: ChangeSummary[];
+  allowedTransitions: ChangeStatus[];
+  rowVersion?: string | null;
+}
+
+export interface ChangeSummaryCounts {
+  openChanges: number;
+  awaitingApproval: number;
+  scheduledThisWeek: number;
+  implementing: number;
+  awaitingReview: number;
+  assignedToMe: number;
+  emergencyThisMonth: number;
+  openByStatus: { status: ChangeStatus; count: number }[];
+}
+
+export interface ChangeSearchParams {
+  search?: string;
+  status?: string;
+  type?: string;
+  risk?: string;
+  scope?: string;
+  openOnly?: boolean;
+  sortBy?: string;
+  sortDescending?: boolean;
+  page?: number;
+  pageSize?: number;
+}
