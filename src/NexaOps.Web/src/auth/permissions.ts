@@ -1,0 +1,52 @@
+/**
+ * The permission codes the UI checks.
+ *
+ * These mirror the server catalogue. They decide what is rendered, never what is allowed:
+ * every operation is authorised again by the API, so a mismatch here is a cosmetic bug rather
+ * than a security hole.
+ */
+export const Permissions = {
+  incidentRead: 'incident.read',
+  incidentReadAll: 'incident.read.all',
+  incidentCreate: 'incident.create',
+  incidentUpdate: 'incident.update',
+  incidentAssign: 'incident.assign',
+  incidentResolve: 'incident.resolve',
+  incidentClose: 'incident.close',
+  incidentReopen: 'incident.reopen',
+  incidentCancel: 'incident.cancel',
+  incidentPriorityOverride: 'incident.priority.override',
+  incidentDeclareMajor: 'incident.declare_major',
+  incidentCommentCreate: 'incident.comment.create',
+  incidentWorkNoteRead: 'incident.worknote.read',
+  incidentWorkNoteCreate: 'incident.worknote.create',
+  incidentExport: 'incident.export',
+  incidentArchive: 'incident.archive',
+
+  categoryRead: 'category.read',
+  categoryManage: 'category.manage',
+  groupRead: 'group.read',
+  groupManage: 'group.manage',
+  userRead: 'user.read',
+  userManage: 'user.manage',
+  roleRead: 'role.read',
+  roleManage: 'role.manage',
+
+  slaRead: 'sla.read',
+  slaManage: 'sla.manage',
+  calendarRead: 'calendar.read',
+  calendarManage: 'calendar.manage',
+
+  auditRead: 'audit.read',
+  settingRead: 'setting.read',
+  settingManage: 'setting.manage',
+
+  reportView: 'report.view',
+  reportExport: 'report.export',
+
+  aiAssistantUse: 'ai.assistant.use',
+  aiActionConfirm: 'ai.action.confirm',
+  aiManage: 'ai.manage',
+} as const;
+
+export type PermissionCode = (typeof Permissions)[keyof typeof Permissions];

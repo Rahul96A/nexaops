@@ -1,0 +1,40 @@
+<Project>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsAsErrors>nullable;CS8600;CS8602;CS8603;CS8618</WarningsAsErrors>
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Product metadata">
+    <Product>NexaOps</Product>
+    <Company>NexaOps</Company>
+    <Authors>NexaOps</Authors>
+    <VersionPrefix>1.0.0</VersionPrefix>
+    <Copyright>Copyright (c) NexaOps</Copyright>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Security">
+    <!-- Fail the build when a referenced package has a known vulnerability. -->
+    <NuGetAudit>true</NuGetAudit>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <NuGetAuditLevel>moderate</NuGetAuditLevel>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('Tests'))">
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!-- Test projects legitimately use nulls to assert guard clauses. -->
+    <WarningsAsErrors></WarningsAsErrors>
+  </PropertyGroup>
+
+</Project>

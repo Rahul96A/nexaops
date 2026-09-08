@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The domain layer intentionally has ZERO package references.
+    If this file ever grows a <PackageReference>, that is a design regression:
+    domain rules must not depend on EF Core, ASP.NET Core, or any Azure SDK.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>NexaOps.Domain</RootNamespace>
+    <AssemblyName>NexaOps.Domain</AssemblyName>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/NexaOps.Api/NexaOps.Api.csproj" />
+    <Project Path="src/NexaOps.Application/NexaOps.Application.csproj" />
+    <Project Path="src/NexaOps.Domain/NexaOps.Domain.csproj" />
+    <Project Path="src/NexaOps.Infrastructure/NexaOps.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/NexaOps.Api.IntegrationTests/NexaOps.Api.IntegrationTests.csproj" />
+    <Project Path="tests/NexaOps.Application.Tests/NexaOps.Application.Tests.csproj" />
+    <Project Path="tests/NexaOps.Domain.Tests/NexaOps.Domain.Tests.csproj" />
+  </Folder>
+</Solution>

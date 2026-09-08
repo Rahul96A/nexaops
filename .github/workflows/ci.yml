@@ -1,0 +1,244 @@
+name: CI
+
+# Runs on every push and pull request. This is the gate: nothing merges that does not build,
+# pass its tests, lint cleanly and survive a dependency and secret scan.
+on:
+  push:
+    branches: [main, develop, 'release/**']
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  NODE_VERSION: '22.x'
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Backend
+  # ---------------------------------------------------------------------------
+  backend:
+    name: Backend build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      # Integration tests run against real SQL Server rather than a substitute provider. The
+      # properties they exist to prove - tenant query filters, the write guard, rowversion
+      # concurrency - are provider behaviour, so testing them elsewhere would prove nothing.
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: 'Y'
+          MSSQL_SA_PASSWORD: ${{ secrets.CI_SQL_PASSWORD || 'Integration#Test2026' }}
+          MSSQL_PID: Developer
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$MSSQL_SA_PASSWORD\" -Q 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 15
+          --health-start-period 30s
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore NexaOps.slnx
+
+      # NuGetAudit is enabled in Directory.Build.props, so a package with a known moderate or
+      # higher vulnerability fails here rather than reaching a container image.
+      - name: Build
+        run: dotnet build NexaOps.slnx --configuration Release --no-restore /warnaserror
+
+      - name: Verify formatting
+        run: dotnet format NexaOps.slnx --verify-no-changes --no-restore
+        continue-on-error: true
+
+      - name: Domain and application tests
+        run: |
+          dotnet test tests/NexaOps.Domain.Tests/NexaOps.Domain.Tests.csproj \
+            --configuration Release --no-build --logger "trx;LogFileName=domain.trx" \
+            --results-directory artifacts/test-results \
+            --collect:"XPlat Code Coverage"
+          dotnet test tests/NexaOps.Application.Tests/NexaOps.Application.Tests.csproj \
+            --configuration Release --no-build --logger "trx;LogFileName=application.trx" \
+            --results-directory artifacts/test-results \
+            --collect:"XPlat Code Coverage"
+
+      - name: Integration tests
+        env:
+          # {database} is replaced per run, so concurrent jobs never share a database.
+          NEXAOPS_TEST_SQL: 'Server=localhost,1433;Database={database};User Id=sa;Password=${{ secrets.CI_SQL_PASSWORD || ''Integration#Test2026'' }};TrustServerCertificate=True;Encrypt=False'
+        run: |
+          dotnet test tests/NexaOps.Api.IntegrationTests/NexaOps.Api.IntegrationTests.csproj \
+            --configuration Release --no-build --logger "trx;LogFileName=integration.trx" \
+            --results-directory artifacts/test-results
+
+      - name: Publish test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: artifacts/test-results/**
+          retention-days: 14
+
+  # ---------------------------------------------------------------------------
+  # Frontend
+  # ---------------------------------------------------------------------------
+  frontend:
+    name: Frontend build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: src/NexaOps.Web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: src/NexaOps.Web/package-lock.json
+
+      # `npm ci` installs exactly the lock file, so CI can never resolve a different tree from
+      # the one a developer tested.
+      - name: Install
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload build output
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: src/NexaOps.Web/dist
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # Infrastructure
+  # ---------------------------------------------------------------------------
+  infrastructure:
+    name: Bicep validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Bicep templates
+        run: |
+          az bicep install
+          az bicep build --file infra/bicep/main.bicep --stdout > /dev/null
+
+      # The linter catches insecure defaults - secrets in outputs, hard-coded credentials,
+      # unencrypted storage - before anything reaches a subscription.
+      - name: Lint Bicep templates
+        run: |
+          for template in infra/bicep/main.bicep infra/bicep/modules/*.bicep; do
+            echo "Linting $template"
+            az bicep lint --file "$template"
+          done
+
+  # ---------------------------------------------------------------------------
+  # Security
+  # ---------------------------------------------------------------------------
+  security:
+    name: Security scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history: a secret scan that only sees the tip commit misses a credential that
+          # was committed and then removed, which is still a leaked credential.
+          fetch-depth: 0
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Report vulnerable NuGet packages
+        run: |
+          dotnet restore NexaOps.slnx
+          dotnet list NexaOps.slnx package --vulnerable --include-transitive 2>&1 | tee nuget-audit.txt
+          if grep -q "has the following vulnerable packages" nuget-audit.txt; then
+            echo "::error::Vulnerable NuGet packages found."
+            exit 1
+          fi
+
+      - name: Report vulnerable npm packages
+        working-directory: src/NexaOps.Web
+        run: |
+          npm ci
+          npm audit --audit-level=high
+
+      - name: Scan for committed secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ---------------------------------------------------------------------------
+  # Container image. Built on every run so a Dockerfile break is caught in CI,
+  # but only pushed from the deployment workflow.
+  # ---------------------------------------------------------------------------
+  container:
+    name: Container image build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [backend]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/NexaOps.Api/Dockerfile
+          push: false
+          tags: nexaops-api:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=1.0.0-${{ github.run_number }}

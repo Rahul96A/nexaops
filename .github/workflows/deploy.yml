@@ -1,0 +1,318 @@
+name: Deploy
+
+# Promotion pipeline. Staging deploys automatically from main; production requires a manual
+# approval on a protected environment, so no change reaches customers without a person
+# deciding it should.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to deploy
+        required: true
+        type: choice
+        options: [dev, test, stg, prod]
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  NODE_VERSION: '22.x'
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+  AZURE_RESOURCE_GROUP_PREFIX: rg-nexaops
+
+# Federated credentials rather than a stored service principal secret: the workflow exchanges a
+# short-lived GitHub OIDC token for an Azure token, so there is no long-lived credential in
+# repository secrets to leak or rotate.
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  build:
+    name: Build and publish image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      imageTag: ${{ steps.version.outputs.tag }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compute version
+        id: version
+        run: echo "tag=1.0.${{ github.run_number }}-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: src/NexaOps.Web/package-lock.json
+
+      - name: Build front end
+        working-directory: src/NexaOps.Web
+        run: |
+          npm ci
+          npm run typecheck
+          npm run lint
+          npm run test
+          npm run build
+
+      - name: Upload front end
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist-${{ steps.version.outputs.tag }}
+          path: src/NexaOps.Web/dist
+
+      # The migration bundle is a self-contained executable that applies the schema. Producing
+      # it here means the deployment step needs neither the SDK nor the source, and the exact
+      # schema change can be reviewed as an artefact before it touches a database.
+      - name: Create migration bundle
+        run: |
+          dotnet tool install --global dotnet-ef --version 10.0.11
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          dotnet ef migrations bundle \
+            --project src/NexaOps.Infrastructure/NexaOps.Infrastructure.csproj \
+            --startup-project src/NexaOps.Infrastructure/NexaOps.Infrastructure.csproj \
+            --configuration Release \
+            --self-contained --target-runtime linux-x64 \
+            --output ./migrate --force
+
+      - name: Upload migration bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-bundle-${{ steps.version.outputs.tag }}
+          path: ./migrate
+
+      - name: Sign in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Sign in to the container registry
+        run: az acr login --name ${{ secrets.ACR_NAME }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: src/NexaOps.Api/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.ACR_NAME }}.azurecr.io/nexaops-api:${{ steps.version.outputs.tag }}
+            ${{ secrets.ACR_NAME }}.azurecr.io/nexaops-api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ steps.version.outputs.tag }}
+
+  # ---------------------------------------------------------------------------
+  staging:
+    name: Deploy to staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: [build]
+    if: github.ref == 'refs/heads/main' || inputs.environment == 'stg'
+    environment:
+      name: staging
+      url: ${{ steps.deploy.outputs.publicUrl }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sign in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # A what-if is printed before anything is applied, so the deployment log shows exactly
+      # what changed - which is the difference between an audited change and a surprise.
+      - name: Preview infrastructure changes
+        run: |
+          az deployment group what-if \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP_PREFIX }}-stg \
+            --template-file infra/bicep/main.bicep \
+            --parameters infra/bicep/parameters/stg.bicepparam \
+            --parameters sqlAdminGroupObjectId=${{ secrets.SQL_ADMIN_GROUP_OBJECT_ID }}
+
+      - name: Deploy infrastructure
+        id: deploy
+        run: |
+          outputs=$(az deployment group create \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP_PREFIX }}-stg \
+            --template-file infra/bicep/main.bicep \
+            --parameters infra/bicep/parameters/stg.bicepparam \
+            --parameters sqlAdminGroupObjectId=${{ secrets.SQL_ADMIN_GROUP_OBJECT_ID }} \
+            --query properties.outputs -o json)
+
+          echo "publicUrl=$(echo "$outputs" | jq -r .publicUrl.value)" >> "$GITHUB_OUTPUT"
+          echo "containerAppName=$(echo "$outputs" | jq -r .containerAppName.value)" >> "$GITHUB_OUTPUT"
+          echo "sqlServerFqdn=$(echo "$outputs" | jq -r .sqlServerFqdn.value)" >> "$GITHUB_OUTPUT"
+          echo "sqlDatabaseName=$(echo "$outputs" | jq -r .sqlDatabaseName.value)" >> "$GITHUB_OUTPUT"
+
+      - name: Download migration bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: migration-bundle-${{ needs.build.outputs.imageTag }}
+          path: ./migrate-artifact
+
+      # Migrations are applied as an explicit, reviewable step before the new image is released.
+      # A replica restarting must never change the schema on its own.
+      - name: Apply database migrations
+        run: |
+          chmod +x ./migrate-artifact/efbundle
+          ./migrate-artifact/efbundle \
+            --connection "Server=tcp:${{ steps.deploy.outputs.sqlServerFqdn }},1433;Database=${{ steps.deploy.outputs.sqlDatabaseName }};Authentication=Active Directory Default;Encrypt=True;"
+
+      - name: Release the new image
+        run: |
+          az containerapp update \
+            --name ${{ steps.deploy.outputs.containerAppName }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP_PREFIX }}-stg \
+            --image ${{ secrets.ACR_NAME }}.azurecr.io/nexaops-api:${{ needs.build.outputs.imageTag }}
+
+      - name: Smoke test
+        run: |
+          url="${{ steps.deploy.outputs.publicUrl }}"
+
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --max-time 10 "$url/health/ready" > /dev/null; then
+              echo "Readiness probe passed after $attempt attempt(s)."
+              break
+            fi
+
+            if [ "$attempt" -eq 30 ]; then
+              echo "::error::The deployed revision never became ready."
+              exit 1
+            fi
+
+            sleep 10
+          done
+
+          # An unauthenticated request must be refused. If this ever returns 200, the fallback
+          # authorization policy has regressed and the whole API is public.
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}' "$url/api/v1/incidents")
+          if [ "$status" != "401" ]; then
+            echo "::error::Expected 401 from an unauthenticated request, got $status."
+            exit 1
+          fi
+
+          echo "Smoke tests passed."
+
+  # ---------------------------------------------------------------------------
+  production:
+    name: Deploy to production
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: [build, staging]
+    if: github.ref == 'refs/heads/main' || inputs.environment == 'prod'
+
+    # Protected environment with required reviewers. This is the manual gate: the job waits
+    # here until a human approves it, and nothing reaches customers before that.
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.publicUrl }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sign in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID_PROD }}
+
+      - name: Preview infrastructure changes
+        run: |
+          az deployment group what-if \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP_PREFIX }}-prod \
+            --template-file infra/bicep/main.bicep \
+            --parameters infra/bicep/parameters/prod.bicepparam \
+            --parameters sqlAdminGroupObjectId=${{ secrets.SQL_ADMIN_GROUP_OBJECT_ID }}
+
+      - name: Deploy infrastructure
+        id: deploy
+        run: |
+          outputs=$(az deployment group create \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP_PREFIX }}-prod \
+            --template-file infra/bicep/main.bicep \
+            --parameters infra/bicep/parameters/prod.bicepparam \
+            --parameters sqlAdminGroupObjectId=${{ secrets.SQL_ADMIN_GROUP_OBJECT_ID }} \
+            --query properties.outputs -o json)
+
+          echo "publicUrl=$(echo "$outputs" | jq -r .publicUrl.value)" >> "$GITHUB_OUTPUT"
+          echo "containerAppName=$(echo "$outputs" | jq -r .containerAppName.value)" >> "$GITHUB_OUTPUT"
+          echo "sqlServerFqdn=$(echo "$outputs" | jq -r .sqlServerFqdn.value)" >> "$GITHUB_OUTPUT"
+          echo "sqlDatabaseName=$(echo "$outputs" | jq -r .sqlDatabaseName.value)" >> "$GITHUB_OUTPUT"
+
+      - name: Download migration bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: migration-bundle-${{ needs.build.outputs.imageTag }}
+          path: ./migrate-artifact
+
+      - name: Apply database migrations
+        run: |
+          chmod +x ./migrate-artifact/efbundle
+          ./migrate-artifact/efbundle \
+            --connection "Server=tcp:${{ steps.deploy.outputs.sqlServerFqdn }},1433;Database=${{ steps.deploy.outputs.sqlDatabaseName }};Authentication=Active Directory Default;Encrypt=True;"
+
+      - name: Release the new image
+        run: |
+          az containerapp update \
+            --name ${{ steps.deploy.outputs.containerAppName }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP_PREFIX }}-prod \
+            --image ${{ secrets.ACR_NAME }}.azurecr.io/nexaops-api:${{ needs.build.outputs.imageTag }}
+
+      - name: Smoke test
+        run: |
+          url="${{ steps.deploy.outputs.publicUrl }}"
+
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --max-time 10 "$url/health/ready" > /dev/null; then
+              break
+            fi
+
+            if [ "$attempt" -eq 30 ]; then
+              echo "::error::The deployed revision never became ready."
+              exit 1
+            fi
+
+            sleep 10
+          done
+
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}' "$url/api/v1/incidents")
+          if [ "$status" != "401" ]; then
+            echo "::error::Expected 401 from an unauthenticated request, got $status."
+            exit 1
+          fi
+
+      # Container Apps keeps the previous revision, so a failed smoke test shifts all traffic
+      # back to it in seconds rather than waiting for a rebuild.
+      - name: Roll back on failure
+        if: failure()
+        run: |
+          previous=$(az containerapp revision list \
+            --name ${{ steps.deploy.outputs.containerAppName }} \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP_PREFIX }}-prod \
+            --query "[?properties.active && properties.trafficWeight==\`0\`] | [0].name" -o tsv)
+
+          if [ -n "$previous" ]; then
+            echo "::warning::Rolling back to revision $previous."
+            az containerapp ingress traffic set \
+              --name ${{ steps.deploy.outputs.containerAppName }} \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP_PREFIX }}-prod \
+              --revision-weight "$previous=100"
+          fi

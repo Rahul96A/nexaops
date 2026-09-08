@@ -1,0 +1,48 @@
+## .NET
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+*.user
+*.suo
+.vs/
+TestResults/
+coverage/
+*.coverage
+*.trx
+
+## Node
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.local
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+## Env & secrets - NEVER commit
+.env
+.env.*
+!.env.example
+appsettings.Local.json
+appsettings.*.Local.json
+secrets.json
+*.pfx
+*.key
+*.pem
+
+## IDE
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json.example
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Local database
+*.mdf
+*.ldf

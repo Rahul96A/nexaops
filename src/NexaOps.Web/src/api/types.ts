@@ -1,0 +1,502 @@
+/**
+ * The wire contract with the NexaOps API.
+ *
+ * These mirror the server DTOs. Enums are transmitted as names rather than numbers, so a
+ * reordered enum on the server cannot silently change the meaning of a stored value here.
+ */
+
+// ---------------------------------------------------------------------------
+// Shared
+// ---------------------------------------------------------------------------
+
+export interface PagedResult<T> {
+  items: T[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  hasPrevious: boolean;
+  hasNext: boolean;
+}
+
+export type SortDirection = 'Ascending' | 'Descending';
+
+/** RFC 9457 problem details, as returned by every API failure. */
+export interface ProblemDetails {
+  type?: string;
+  title?: string;
+  status?: number;
+  detail?: string;
+  instance?: string;
+  /** Stable machine-readable identifier, e.g. `incident.invalid_transition`. */
+  code?: string;
+  correlationId?: string;
+  /** Present on validation failures: field name to messages. */
+  errors?: Record<string, string[]>;
+  /** Present when sign-in matched several tenants. */
+  tenants?: TenantChoice[];
+}
+
+export interface TenantChoice {
+  code: string;
+  name: string;
+}
+
+// ---------------------------------------------------------------------------
+// Identity
+// ---------------------------------------------------------------------------
+
+export interface SignInRequest {
+  email: string;
+  password: string;
+  tenantCode?: string;
+}
+
+export interface AuthenticationResult {
+  accessToken: string;
+  expiresAt: string;
+  refreshToken: string;
+  refreshTokenExpiresAt: string;
+  profile: UserProfile;
+}
+
+export interface GroupMembership {
+  groupId: string;
+  name: string;
+  isLead: boolean;
+}
+
+export interface UserProfile {
+  userId: string;
+  email: string;
+  displayName: string;
+  firstName: string;
+  lastName: string;
+  jobTitle?: string | null;
+  avatarColor?: string | null;
+  tenantId: string;
+  tenantCode: string;
+  tenantName: string;
+  timeZoneId: string;
+  locale: string;
+  currencyCode: string;
+  dateFormat: string;
+  organizationId?: string | null;
+  organizationName?: string | null;
+  departmentId?: string | null;
+  departmentName?: string | null;
+  roles: string[];
+  permissions: string[];
+  groups: GroupMembership[];
+  mustChangePassword: boolean;
+  isPlatformAdministrator: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Incidents
+// ---------------------------------------------------------------------------
+
+export type Impact = 'Extensive' | 'Significant' | 'Moderate' | 'Minor';
+
+export type Urgency = 'Critical' | 'High' | 'Medium' | 'Low';
+
+export type Priority = 'P1Critical' | 'P2High' | 'P3Moderate' | 'P4Low' | 'P5Planning';
+
+export type IncidentStatus =
+  | 'New'
+  | 'Assigned'
+  | 'InProgress'
+  | 'Pending'
+  | 'Resolved'
+  | 'Closed'
+  | 'Cancelled';
+
+export type PendingReason =
+  | 'AwaitingRequester'
+  | 'AwaitingVendor'
+  | 'AwaitingChange'
+  | 'AwaitingParts'
+  | 'AwaitingProblem';
+
+export type IncidentChannel =
+  | 'Portal'
+  | 'Email'
+  | 'Phone'
+  | 'Chat'
+  | 'WalkIn'
+  | 'Monitoring'
+  | 'Api'
+  | 'AiAssistant';
+
+export type ResolutionCode =
+  | 'Resolved'
+  | 'ResolvedByWorkaround'
+  | 'ResolvedByKnownError'
+  | 'ResolvedByChange'
+  | 'Duplicate'
+  | 'NoFaultFound'
+  | 'UserEducated'
+  | 'WithdrawnByRequester';
+
+export type IncidentCommentKind = 'PublicComment' | 'WorkNote';
+
+export type SlaTargetType = 'Response' | 'Resolution' | 'Closure';
+
+export type SlaState = 'InProgress' | 'Paused' | 'Met' | 'Breached' | 'Cancelled';
+
+export type IncidentViewScope =
+  | 'All'
+  | 'AssignedToMe'
+  | 'MyTeam'
+  | 'RaisedByMe'
+  | 'Unassigned'
+  | 'Breached'
+  | 'DueSoon';
+
+export interface SlaInstance {
+  id: string;
+  name: string;
+  targetType: SlaTargetType;
+  state: SlaState;
+  startedAt: string;
+  dueAt: string;
+  completedAt?: string | null;
+  breachedAt?: string | null;
+  durationMinutes: number;
+  elapsedMinutes: number;
+  /** Negative once the commitment is overrun. */
+  remainingMinutes: number;
+  consumedPercent: number;
+  warningThresholdPercent: number;
+}
+
+export interface IncidentListItem {
+  id: string;
+  number: string;
+  title: string;
+  status: IncidentStatus;
+  priority: Priority;
+  impact: Impact;
+  urgency: Urgency;
+  categoryId?: string | null;
+  categoryName?: string | null;
+  subcategoryName?: string | null;
+  requesterId: string;
+  requesterName: string;
+  assignedToUserId?: string | null;
+  assignedToName?: string | null;
+  assignmentGroupId?: string | null;
+  assignmentGroupName?: string | null;
+  channel: IncidentChannel;
+  isMajorIncident: boolean;
+  hasBreachedSla: boolean;
+  nextSlaDueAt?: string | null;
+  createdAt: string;
+  updatedAt?: string | null;
+  resolvedAt?: string | null;
+}
+
+export interface IncidentDetail {
+  id: string;
+  number: string;
+  title: string;
+  description: string;
+  status: IncidentStatus;
+  pendingReason?: PendingReason | null;
+  impact: Impact;
+  urgency: Urgency;
+  priority: Priority;
+  isPriorityOverridden: boolean;
+  priorityOverrideReason?: string | null;
+  channel: IncidentChannel;
+  isMajorIncident: boolean;
+  requesterId: string;
+  requesterName: string;
+  requesterEmail?: string | null;
+  affectedUserId?: string | null;
+  affectedUserName?: string | null;
+  organizationId?: string | null;
+  organizationName?: string | null;
+  departmentId?: string | null;
+  departmentName?: string | null;
+  categoryId?: string | null;
+  categoryName?: string | null;
+  subcategoryId?: string | null;
+  subcategoryName?: string | null;
+  assignmentGroupId?: string | null;
+  assignmentGroupName?: string | null;
+  assignedToUserId?: string | null;
+  assignedToName?: string | null;
+  resolutionCode?: ResolutionCode | null;
+  resolutionNotes?: string | null;
+  firstRespondedAt?: string | null;
+  resolvedAt?: string | null;
+  resolvedByName?: string | null;
+  closedAt?: string | null;
+  reopenCount: number;
+  parentIncidentId?: string | null;
+  parentIncidentNumber?: string | null;
+  createdAt: string;
+  createdByName?: string | null;
+  updatedAt?: string | null;
+  updatedByName?: string | null;
+  tags: string[];
+  slaInstances: SlaInstance[];
+  /** Statuses this incident may legally move to, so the UI need not duplicate the rules. */
+  allowedTransitions: IncidentStatus[];
+  attachmentCount: number;
+  commentCount: number;
+  /** Round-trip this on update so a concurrent edit is rejected rather than overwritten. */
+  concurrencyToken?: string | null;
+}
+
+export interface IncidentComment {
+  id: string;
+  kind: IncidentCommentKind;
+  body: string;
+  authorUserId: string;
+  authorName: string;
+  authorAvatarColor?: string | null;
+  isSystemGenerated: boolean;
+  createdAt: string;
+}
+
+export interface IncidentFieldChange {
+  field: string;
+  from?: string | null;
+  to?: string | null;
+}
+
+export interface IncidentActivity {
+  id: string;
+  type: 'comment' | 'work_note' | 'field_change';
+  occurredAt: string;
+  actorUserId?: string | null;
+  actorName?: string | null;
+  actorAvatarColor?: string | null;
+  body?: string | null;
+  commentKind?: IncidentCommentKind | null;
+  isSystemGenerated: boolean;
+  changes?: IncidentFieldChange[] | null;
+}
+
+export interface AgentWorkload {
+  userId: string;
+  displayName: string;
+  avatarColor?: string | null;
+  openCount: number;
+  breachedCount: number;
+}
+
+export interface ServiceDeskSummary {
+  openIncidents: number;
+  criticalOpen: number;
+  highOpen: number;
+  unassignedInMyGroups: number;
+  assignedToMe: number;
+  raisedByMe: number;
+  breachedOpen: number;
+  dueWithinTwoHours: number;
+  resolvedToday: number;
+  createdToday: number;
+  teamWorkload: AgentWorkload[];
+  openByPriority: { priority: Priority; count: number }[];
+  openByStatus: { status: IncidentStatus; count: number }[];
+}
+
+export interface IncidentSearchParams {
+  search?: string;
+  scope?: IncidentViewScope;
+  status?: IncidentStatus[];
+  priority?: Priority[];
+  openOnly?: boolean;
+  assignedToUserId?: string;
+  assignmentGroupId?: string;
+  requesterId?: string;
+  categoryId?: string;
+  subcategoryId?: string;
+  isMajorIncident?: boolean;
+  hasBreachedSla?: boolean;
+  createdFrom?: string;
+  createdTo?: string;
+  tag?: string;
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDirection?: SortDirection;
+}
+
+export interface CreateIncidentRequest {
+  title: string;
+  description: string;
+  requesterId?: string | null;
+  affectedUserId?: string | null;
+  categoryId?: string | null;
+  subcategoryId?: string | null;
+  impact: Impact;
+  urgency: Urgency;
+  assignmentGroupId?: string | null;
+  assignedToUserId?: string | null;
+  channel?: IncidentChannel;
+  tags?: string[];
+}
+
+export interface UpdateIncidentRequest {
+  title?: string;
+  description?: string;
+  categoryId?: string | null;
+  subcategoryId?: string | null;
+  impact?: Impact;
+  urgency?: Urgency;
+  affectedUserId?: string | null;
+  tags?: string[];
+  concurrencyToken?: string | null;
+}
+
+export interface AssignIncidentRequest {
+  assignmentGroupId?: string | null;
+  assignedToUserId?: string | null;
+  note?: string;
+}
+
+export interface ChangeStatusRequest {
+  status: IncidentStatus;
+  pendingReason?: PendingReason;
+  resolutionCode?: ResolutionCode;
+  notes?: string;
+}
+
+export interface ChangePriorityRequest {
+  impact?: Impact;
+  urgency?: Urgency;
+  overridePriority?: Priority;
+  overrideReason?: string;
+}
+
+export interface AddCommentRequest {
+  body: string;
+  kind: IncidentCommentKind;
+}
+
+// ---------------------------------------------------------------------------
+// Reference data
+// ---------------------------------------------------------------------------
+
+export interface Subcategory {
+  id: string;
+  code: string;
+  name: string;
+  defaultAssignmentGroupId?: string | null;
+}
+
+export interface Category {
+  id: string;
+  code: string;
+  name: string;
+  defaultAssignmentGroupId?: string | null;
+  subcategories: Subcategory[];
+}
+
+export interface GroupSummary {
+  id: string;
+  code: string;
+  name: string;
+  email?: string | null;
+  memberCount: number;
+}
+
+export interface UserSummary {
+  id: string;
+  displayName: string;
+  email: string;
+  jobTitle?: string | null;
+  avatarColor?: string | null;
+  isLead: boolean;
+}
+
+export interface PriorityMatrixEntry {
+  impact: Impact;
+  urgency: Urgency;
+  priority: Priority;
+}
+
+export interface IndianState {
+  code: string;
+  name: string;
+  gstStateCode: string;
+  isUnionTerritory: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+export type NotificationSeverity = 'Information' | 'Success' | 'Warning' | 'Critical';
+
+export interface AppNotification {
+  id: string;
+  kind: string;
+  severity: NotificationSeverity;
+  title: string;
+  body: string;
+  module?: string | null;
+  recordId?: string | null;
+  actionUrl?: string | null;
+  isRead: boolean;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Audit
+// ---------------------------------------------------------------------------
+
+export interface AuditEvent {
+  id: string;
+  occurredAt: string;
+  actorUserId?: string | null;
+  actorDisplayName?: string | null;
+  action: string;
+  entityType: string;
+  entityId?: string | null;
+  entityLabel?: string | null;
+  source: string;
+  outcome: string;
+  changedFields?: string | null;
+  beforeJson?: string | null;
+  afterJson?: string | null;
+  message?: string | null;
+  correlationId?: string | null;
+  ipAddress?: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// AI
+// ---------------------------------------------------------------------------
+
+export interface AiToolSummary {
+  name: string;
+  description: string;
+  requiredPermission: string;
+  isMutating: boolean;
+}
+
+export interface AiStatus {
+  isConfigured: boolean;
+  provider: string;
+  chatModel?: string | null;
+  semanticSearchAvailable: boolean;
+  availableTools: AiToolSummary[];
+  unavailableReason?: string | null;
+}
+
+export interface AiTurn {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface AiAnswer {
+  answer: string;
+  toolsUsed: string[];
+  inputTokens: number;
+  outputTokens: number;
+}
