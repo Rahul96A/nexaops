@@ -34,6 +34,7 @@ import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import HubOutlinedIcon from '@mui/icons-material/HubOutlined';
 import DevicesOtherOutlinedIcon from '@mui/icons-material/DevicesOtherOutlined';
 import AutoModeOutlinedIcon from '@mui/icons-material/AutoModeOutlined';
+import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
@@ -156,7 +157,12 @@ const NAVIGATION: NavSection[] = [
         icon: <AutoModeOutlinedIcon />,
         permission: Permissions.workflowRead,
       },
-      { label: 'Reports', to: '/reports', icon: <ConfirmationNumberOutlinedIcon />, comingSoon: true },
+      {
+        label: 'Reports',
+        to: '/reports',
+        icon: <InsightsOutlinedIcon />,
+        permission: Permissions.reportView,
+      },
       { label: 'Settings', to: '/settings', icon: <ConfirmationNumberOutlinedIcon />, comingSoon: true },
     ],
   },

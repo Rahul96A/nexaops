@@ -30,6 +30,7 @@ below is implemented, tested, and runs.
 | Asset register, custody trail, licence compliance | Built, 20 integration tests |
 | Approvals, module-agnostic | Built, 8 isolation tests |
 | Workflow automation: rules, run history, rule editor | Built, 12 integration tests |
+| Reporting: service desk, SLA, changes, requests, CSV export | Built, 15 integration tests |
 | SLA engine with Indian business calendars, incidents and requests | Built, 32 tests |
 | Notifications (in-app + email dispatch) | Built |
 | Service desk dashboard, incident queue, record pages | Built |
@@ -38,8 +39,8 @@ below is implemented, tested, and runs.
 | CI/CD pipelines | Built |
 | Demo environment, 420 incidents across 2 tenants | Built |
 
-Modules that ship in later phases — reporting and settings — appear in the navigation marked
-**"Later"** and are deliberately not clickable. Nothing in this product pretends to work.
+Settings is the one module still marked **"Later"** in the navigation, and is deliberately not
+clickable. Nothing in this product pretends to work.
 
 **[See the full status report, including known limitations →](docs/STATUS.md)**
 
@@ -168,7 +169,7 @@ Every one of these passes on the current tree:
 
 ```bash
 dotnet build NexaOps.slnx -warnaserror   # 0 warnings, 0 errors
-dotnet test NexaOps.slnx                 # 574 tests
+dotnet test NexaOps.slnx                 # 602 tests
 cd src/NexaOps.Web && npm run typecheck   # clean
 cd src/NexaOps.Web && npm run lint        # clean
 cd src/NexaOps.Web && npm run test        # 38 tests

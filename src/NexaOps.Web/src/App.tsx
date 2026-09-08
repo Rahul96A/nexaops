@@ -31,6 +31,7 @@ import { AssetsPage } from '@/features/assets/AssetsPage';
 import { AssetDetailPage } from '@/features/assets/AssetDetailPage';
 import { WorkflowsPage } from '@/features/workflows/WorkflowsPage';
 import { WorkflowEditorPage } from '@/features/workflows/WorkflowEditorPage';
+import { ReportsPage } from '@/features/reports/ReportsPage';
 import { AuditPage } from '@/features/audit/AuditPage';
 import { NotFoundPage } from '@/features/NotFoundPage';
 
@@ -261,6 +262,15 @@ export function App() {
             element={
               <RequireAuth permission={Permissions.workflowManage}>
                 <WorkflowEditorPage />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="reports"
+            element={
+              <RequireAuth permission={Permissions.reportView}>
+                <ReportsPage />
               </RequireAuth>
             }
           />

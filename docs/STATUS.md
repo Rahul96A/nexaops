@@ -3,7 +3,8 @@
 **As of 8 September 2026.** Phase 1 (platform foundation), Incident Management, Phase 2
 (Service Requests, Service Catalogue and Approvals) Phase 3 (Problem Management), Phase 4
 (Change Management and the CAB) Phase 5 (Knowledge Base), Phase 6 (CMDB),
-Phase 7 (Asset Management) and Phase 8 (workflow automation), plus a demo environment.
+Phase 7 (Asset Management), Phase 8 (workflow automation) and Phase 9 (reporting),
+plus a demo environment.
 
 This document is written to be handed to someone who has to decide whether to rely on this. It
 lists what works, what does not, and what is deliberately absent — with the gaps in the same
@@ -16,7 +17,7 @@ detail as the achievements.
 | Gate | Result |
 |---|---|
 | `dotnet build NexaOps.slnx -warnaserror` | **0 warnings, 0 errors** |
-| `dotnet test NexaOps.slnx` | **574 passing** |
+| `dotnet test NexaOps.slnx` | **602 passing** |
 | `npm run typecheck` | Clean |
 | `npm run lint` | Clean |
 | `npm run test` | **38 passing** |
@@ -26,7 +27,7 @@ detail as the achievements.
 | `npm audit` | No advisories |
 | gitleaks (full history) | No secrets |
 
-612 tests total (344 domain, 42 application, 188 integration, 38 front end). Breakdown and
+640 tests total (344 domain, 55 application, 203 integration, 38 front end). Breakdown and
 strategy in [TESTING.md](TESTING.md).
 
 > Two of these gates were previously reported as passing when they were not. `dotnet build`
@@ -184,6 +185,54 @@ approval-outcome and SLA-breach triggers, actions that write arbitrary fields or
 any outbound integration. Rules run only against incidents, requests, problems and changes; the
 other modules do not raise triggers, and the field list for them is empty rather than
 misleadingly populated.
+
+### Reporting — complete
+
+- **Every figure is computed from the records, on request.** Nothing is cached, pre-aggregated or
+  estimated. A report that disagrees with the list view behind it is worse than no report, and a
+  nightly roll-up is a second source of truth waiting to drift.
+- **A rate with no denominator is absent, not zero.** A month in which nothing was raised has no
+  breach rate; showing 0% would read as a perfect month. The same applies to resolution time:
+  where nothing was resolved there is no average, which is not an average of zero.
+- **Every rate carries its denominator.** "94% of 17" and "94% of 1,700" are different facts, and
+  a figure shown alone invites the smaller to be read as the larger.
+- **Mean and median together, never one alone.** The mean of ticket durations is dominated by the
+  handful nobody closed; the median hides a tail that is somebody's whole month. Where the two
+  disagree sharply, the disagreement is the finding.
+- **A period ending today says so.** Its last day is partial, and a chart comparing it against
+  complete days understates the final point unless the reader is told.
+- **Every day in the window appears, including empty ones.** A chart that omits quiet days
+  compresses a quiet week into a busy-looking line.
+- **SLA attainment counts only clocks that finished.** One still running is not evidence either
+  way; one cancelled because the record was cancelled was neither met nor missed. Both are
+  reported separately rather than folded into the number.
+- **Change success excludes "successful with issues".** An overrun or an unplanned side effect is
+  exactly what a change process exists to reduce, and folding it into the headline rate would
+  hide the thing being measured.
+- **Change outcomes are counted at review, not at implementation.** An implemented change nobody
+  has reviewed has no outcome; counting it as successful would be an assumption presented as a
+  measurement.
+- **Backlog is reported as "open now", never as "open on a past date".** No status history is
+  stored, so a historic backlog cannot be reconstructed and is not claimed.
+- **A window longer than a year is refused.** Not a licensing limit: the daily series is a row per
+  day and the breakdowns scan the period, so an unbounded range is a way for one request to hold
+  the database for minutes. A period ending in the future is clamped rather than refused, because
+  "this month" run on the eighth is a reasonable thing to ask.
+- **Exporting is a separate permission from viewing, and is audited.** A figure on a screen stays
+  inside the application; a file leaves with whoever downloaded it.
+- **CSV exports neutralise spreadsheet formulas.** A ticket title is written by whoever raised it
+  and read by somebody who trusts the export — `=cmd|...` in a title is a real path from "anyone
+  can raise a ticket" to code on a manager's laptop. Cells that would be interpreted as formulas
+  are prefixed so the spreadsheet treats them as text, and everything is written in invariant
+  culture with a UTF-8 BOM so the file opens the same way wherever it is opened.
+- The trend chart is **hand-drawn SVG rather than a charting library**: one chart does not justify
+  four hundred kilobytes of dependency, and the same numbers are exposed as a table to assistive
+  technology.
+
+**Not built:** scheduled or emailed reports, a custom report builder, per-agent performance
+reporting, and any figure that would need status history (time in each state, backlog as at a
+past date). Reports read the whole tenant — there is no row-level scoping beyond an optional
+assignment-group filter, so `report.view` is a permission to see the tenant's aggregate position.
 
 ### Knowledge Base — complete
 
@@ -418,21 +467,21 @@ detail in [SECURITY.md §7](SECURITY.md) and [TESTING.md §9](TESTING.md).
 
 ## 7. Next implementation phase
 
-**Recommended: reporting, then the settings UI.**
+**Recommended: the settings and administration UI.**
 
-Eight modules now exist, and automation runs across four of them. Reporting follows because a
-workflow nobody can measure is a workflow nobody trusts: the run history answers "what did this
-rule do", and nothing yet answers "is the desk getting better".
+Nine modules now exist. The gap that most limits who can actually run this is configuration:
+categories, groups, roles, SLA definitions and business calendars are all API-only, so a customer
+cannot set up their own tenant without a developer. Everything else on the list is an addition;
+this one is a prerequisite for the product being self-serviceable at all.
 
 Still to build, in the order they earn their place:
 
-1. **Reporting and dashboards** beyond the service desk view.
-2. **Settings and administration UI.** Categories, groups, roles, SLA definitions and calendars
-   are all API-only today; a customer cannot configure their own tenant without a developer.
-3. **Virtual agent** on the existing grounded AI abstraction.
-4. **Integration surface** — inbound email, a mobile client, third-party connectors.
-5. **Scheduled and outcome-driven workflow triggers** — a timer, an approval outcome, an SLA
+1. **Settings and administration UI** — categories, groups, roles, SLA definitions, calendars.
+2. **Virtual agent** on the existing grounded AI abstraction.
+3. **Integration surface** — inbound email, a mobile client, third-party connectors.
+4. **Scheduled and outcome-driven workflow triggers** — a timer, an approval outcome, an SLA
    breach. The engine's shape supports them; the triggers are not raised yet.
+5. **Scheduled and emailed reports**, and a report builder.
 
 Before or alongside them, four items should be treated as prerequisites rather than backlog:
 

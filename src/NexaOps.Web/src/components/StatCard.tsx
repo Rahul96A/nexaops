@@ -6,8 +6,11 @@ import { formatNumber } from '@/utils/format';
  * A single dashboard figure.
  *
  * Every value shown through this component comes from a live API query. Nothing on the
- * dashboard is a hard-coded statistic, which is why the card takes a number rather than a
- * pre-formatted string.
+ * dashboard is a hard-coded statistic.
+ *
+ * Counts are passed as numbers and formatted here. A string is accepted only for values that are
+ * not counts — a rate, or the em dash a rate becomes when there is no denominator to divide by,
+ * which must not be rendered as a zero.
  */
 export function StatCard({
   label,
@@ -18,7 +21,7 @@ export function StatCard({
   onClick,
 }: {
   label: string;
-  value: number;
+  value: number | string;
   icon?: ReactNode;
   tone?: 'default' | 'critical' | 'warning' | 'success';
   caption?: string;
@@ -46,7 +49,7 @@ export function StatCard({
           </Typography>
 
           <Typography variant="h1" sx={{ mt: 0.5, color: toneColor, lineHeight: 1.1 }}>
-            {formatNumber(value)}
+            {typeof value === 'number' ? formatNumber(value) : value}
           </Typography>
 
           {caption && (

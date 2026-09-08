@@ -1356,3 +1356,91 @@ export interface UpsertWorkflowInput {
   actions: UpsertWorkflowActionInput[];
   rowVersion?: string | null;
 }
+
+// --- Reporting ---
+
+/** A measured value with what it was measured over. Percent is null when there is no denominator. */
+export interface Rate {
+  numerator: number;
+  denominator: number;
+  percent?: number | null;
+}
+
+export interface DailyVolume {
+  date: string;
+  created: number;
+  resolved: number;
+}
+
+export interface BreakdownRow {
+  label: string;
+  id?: string | null;
+  created: number;
+  resolved: number;
+  breached: number;
+  breachRate: Rate;
+}
+
+/** Durations arrive as .NET TimeSpan strings ("1.02:03:04"), or null when nothing was measured. */
+export interface DurationStats {
+  mean?: string | null;
+  median?: string | null;
+  sample: number;
+}
+
+export interface ServiceDeskReport {
+  from: string;
+  to: string;
+  isPartialPeriod: boolean;
+  created: number;
+  resolved: number;
+  reopened: number;
+  stillOpen: number;
+  slaAttainment: Rate;
+  reopenRate: Rate;
+  timeToResolve: DurationStats;
+  daily: DailyVolume[];
+  byPriority: BreakdownRow[];
+  byCategory: BreakdownRow[];
+  byGroup: BreakdownRow[];
+}
+
+export interface SlaAttainmentRow {
+  target: 'Response' | 'Resolution' | 'Closure';
+  priority?: Priority | null;
+  met: number;
+  breached: number;
+  attainment: Rate;
+}
+
+export interface SlaReport {
+  from: string;
+  to: string;
+  overall: Rate;
+  rows: SlaAttainmentRow[];
+  stillRunning: number;
+  cancelled: number;
+}
+
+export interface ChangeReport {
+  from: string;
+  to: string;
+  raised: number;
+  reviewed: number;
+  awaitingReview: number;
+  successRate: Rate;
+  emergencyShare: Rate;
+  outcomes: { outcome: ChangeOutcome; count: number }[];
+}
+
+export interface RequestReport {
+  from: string;
+  to: string;
+  raised: number;
+  fulfilled: number;
+  cancelled: number;
+  awaitingApproval: number;
+  timeToFulfil: DurationStats;
+  daily: DailyVolume[];
+  byCatalogItem: BreakdownRow[];
+}

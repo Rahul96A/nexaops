@@ -11,6 +11,7 @@ using NexaOps.Application.Problems;
 using NexaOps.Application.Requests;
 using NexaOps.Application.Sla;
 using NexaOps.Application.Workflows;
+using NexaOps.Application.Reporting;
 
 namespace NexaOps.Application;
 
@@ -43,6 +44,9 @@ public static class DependencyInjection
 
         // Asset management.
         services.AddScoped<IAssetService, AssetService>();
+
+        // Reporting.
+        services.AddScoped<IReportService, ReportService>();
 
         // Workflow automation. The engine is scoped, and its recursion guard relies on that:
         // one instance per request is what stops a rule's own action re-entering the engine.

@@ -22,6 +22,7 @@ using NexaOps.Application.Requests;
 using NexaOps.Application.Notifications;
 using NexaOps.Application.Sla;
 using NexaOps.Application.Workflows;
+using NexaOps.Application.Reporting;
 using NexaOps.Domain.Identity;
 using NexaOps.Infrastructure.Ai;
 using NexaOps.Infrastructure.Caching;
@@ -150,6 +151,9 @@ public static class DependencyInjection
         // Asset management.
         services.AddScoped<IAssetRepository, AssetRepository>();
         services.AddScoped<IAssetQueryService, AssetQueryService>();
+
+        // Reporting.
+        services.AddScoped<IReportQueryService, ReportQueryService>();
 
         // Workflow automation.
         services.AddScoped<IWorkflowRepository, WorkflowRepository>();

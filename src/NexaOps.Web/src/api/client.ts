@@ -287,6 +287,55 @@ export function apiRequest<T>(path: string, options: RequestOptions = {}): Promi
   return send<T>(path, options, false);
 }
 
+/**
+ * Downloads a file from an authenticated endpoint.
+ *
+ * A plain link cannot be used: the API takes a bearer token and a browser navigation carries no
+ * Authorization header, so the request has to be made here and handed to the browser as a blob.
+ * The object URL is revoked immediately afterwards — leaving it alive pins the whole file in
+ * memory for the life of the tab.
+ */
+export async function downloadFile(path: string, query?: Record<string, unknown>): Promise<void> {
+  const headers: Record<string, string> = {};
+
+  const accessToken = tokenStore.getAccessToken();
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+
+  const response = await fetch(`${API_PREFIX}${path}${buildQueryString(query)}`, { headers });
+
+  if (!response.ok) {
+    throw await toApiError(response);
+  }
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+
+  try {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileNameFrom(response) ?? 'download.csv';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+/** Reads the server's suggested file name, so the download is named the same as the export. */
+function fileNameFrom(response: Response): string | null {
+  const disposition = response.headers.get('Content-Disposition');
+
+  if (!disposition) {
+    return null;
+  }
+
+  const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 export const api = {
   get: <T>(path: string, query?: Record<string, unknown>, signal?: AbortSignal) =>
     apiRequest<T>(path, { method: 'GET', query, signal }),
