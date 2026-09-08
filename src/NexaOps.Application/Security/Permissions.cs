@@ -247,6 +247,34 @@ public static class Permissions
     public const string KnowledgeFeedback = "knowledge.feedback";
 
     // ---------------------------------------------------------------
+    // CMDB
+    // ---------------------------------------------------------------
+
+    /// <summary>
+    /// Read configuration items and the dependency graph. Held broadly: an agent who cannot see
+    /// what a failing server supports cannot judge how urgent the call is.
+    /// </summary>
+    public const string CmdbRead = "cmdb.read";
+
+    public const string CmdbCreate = "cmdb.create";
+    public const string CmdbUpdate = "cmdb.update";
+
+    /// <summary>
+    /// Add and remove dependency edges.
+    /// <para>
+    /// A distinct code rather than part of <see cref="CmdbUpdate"/>, so a customer can let a
+    /// team correct serial numbers and locations without letting them rewire the graph that
+    /// impact analysis trusts. Seeded roles grant the two together from service desk manager
+    /// upwards; the separation exists for customers who want it, not as a claim that NexaOps
+    /// withholds it by default.
+    /// </para>
+    /// </summary>
+    public const string CmdbManageRelationships = "cmdb.manage_relationships";
+
+    /// <summary>Retire or dispose of a configuration item.</summary>
+    public const string CmdbRetire = "cmdb.retire";
+
+    // ---------------------------------------------------------------
     // Reporting
     // ---------------------------------------------------------------
 
@@ -369,6 +397,12 @@ public static class Permissions
         new(KnowledgePublish, "Knowledge", "Publish articles", "Publish an article to the organisation."),
         new(KnowledgeRetire, "Knowledge", "Retire articles", "Withdraw an article from search."),
         new(KnowledgeFeedback, "Knowledge", "Rate articles", "Say whether an article helped."),
+
+        new(CmdbRead, "CMDB", "View configuration items", "Read configuration items and the dependency graph."),
+        new(CmdbCreate, "CMDB", "Create configuration items", "Add items to the CMDB."),
+        new(CmdbUpdate, "CMDB", "Edit configuration items", "Change item details, ownership and criticality."),
+        new(CmdbManageRelationships, "CMDB", "Manage dependencies", "Add and remove dependency relationships."),
+        new(CmdbRetire, "CMDB", "Retire configuration items", "Retire or dispose of a configuration item."),
 
         new(ReportView, "Reporting", "View reports", "Open dashboards and reports."),
         new(ReportExport, "Reporting", "Export reports", "Export report output to file."),

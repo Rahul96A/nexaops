@@ -13,6 +13,7 @@ using NexaOps.Application.Abstractions;
 using NexaOps.Application.Ai;
 using NexaOps.Application.Identity;
 using NexaOps.Application.Changes;
+using NexaOps.Application.Cmdb;
 using NexaOps.Application.Incidents;
 using NexaOps.Application.Knowledge;
 using NexaOps.Application.Problems;
@@ -139,6 +140,10 @@ public static class DependencyInjection
         // Knowledge base.
         services.AddScoped<IKnowledgeRepository, KnowledgeRepository>();
         services.AddScoped<IKnowledgeQueryService, KnowledgeQueryService>();
+
+        // CMDB.
+        services.AddScoped<ICmdbRepository, CmdbRepository>();
+        services.AddScoped<ICmdbQueryService, CmdbQueryService>();
 
         services.AddScoped<IIncidentQueryService, IncidentQueryService>();
         services.AddScoped<IServiceDeskReferenceRepository, ServiceDeskReferenceRepository>();

@@ -107,7 +107,9 @@ public static class SystemRoles
 
         Permissions.KnowledgeReadInternal,
         Permissions.KnowledgeCreate,
-        Permissions.KnowledgeUpdate
+        Permissions.KnowledgeUpdate,
+
+        Permissions.CmdbRead
     ];
 
     private static readonly string[] ServiceDeskManagerPermissions =
@@ -148,7 +150,11 @@ public static class SystemRoles
         // Publishing puts an article in front of the whole organisation, so it is separate from
         // writing one: an author cannot self-publish unreviewed guidance.
         Permissions.KnowledgePublish,
-        Permissions.KnowledgeRetire
+        Permissions.KnowledgeRetire,
+
+        Permissions.CmdbCreate,
+        Permissions.CmdbUpdate,
+        Permissions.CmdbManageRelationships
     ];
 
     /// <summary>The seed definition of one role.</summary>
@@ -272,22 +278,29 @@ public static class SystemRoles
 
         new(AssetManager,
             "Asset Manager",
-            "Owns hardware and software assets. Asset management ships in a later phase.",
+            "Owns hardware and software assets. Asset management ships in a later phase; today this role carries CMDB read access and reporting.",
             [
                 .. BaselinePermissions,
                 Permissions.IncidentReadAll,
                 Permissions.ReportView,
                 Permissions.OrganizationRead,
-                Permissions.DepartmentRead
+                Permissions.DepartmentRead,
+                Permissions.CmdbRead
             ]),
 
         new(CmdbAdministrator,
             "CMDB Administrator",
-            "Owns the configuration management database. The CMDB ships in a later phase.",
+            "Owns the configuration management database: the items, their ownership, and the dependency graph that impact analysis trusts.",
             [
                 .. BaselinePermissions,
                 Permissions.IncidentReadAll,
-                Permissions.ReportView
+                Permissions.ReportView,
+                Permissions.CmdbRead,
+                Permissions.CmdbCreate,
+                Permissions.CmdbUpdate,
+                Permissions.CmdbManageRelationships,
+                Permissions.CmdbRetire,
+                Permissions.GroupRead
             ]),
 
         new(KnowledgeManager,

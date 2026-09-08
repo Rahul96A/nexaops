@@ -4,6 +4,7 @@ using NexaOps.Domain.Approvals;
 using NexaOps.Domain.Auditing;
 using NexaOps.Domain.Catalog;
 using NexaOps.Domain.Changes;
+using NexaOps.Domain.Cmdb;
 using NexaOps.Domain.Common;
 using NexaOps.Domain.Identity;
 using NexaOps.Domain.Knowledge;
@@ -210,6 +211,10 @@ public class NexaOpsDbContext : DbContext
     // --- Knowledge base ---
     public DbSet<KnowledgeArticle> Articles => Set<KnowledgeArticle>();
     public DbSet<ArticleFeedback> ArticleFeedback => Set<ArticleFeedback>();
+
+    // --- Configuration management database ---
+    public DbSet<ConfigurationItem> ConfigurationItems => Set<ConfigurationItem>();
+    public DbSet<CiRelationship> CiRelationships => Set<CiRelationship>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

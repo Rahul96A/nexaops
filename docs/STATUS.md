@@ -2,7 +2,8 @@
 
 **As of 8 September 2026.** Phase 1 (platform foundation), Incident Management, Phase 2
 (Service Requests, Service Catalogue and Approvals) Phase 3 (Problem Management), Phase 4
-(Change Management and the CAB) and Phase 5 (Knowledge Base), plus a demo environment.
+(Change Management and the CAB) Phase 5 (Knowledge Base) and Phase 6 (CMDB),
+plus a demo environment.
 
 This document is written to be handed to someone who has to decide whether to rely on this. It
 lists what works, what does not, and what is deliberately absent — with the gaps in the same
@@ -15,7 +16,7 @@ detail as the achievements.
 | Gate | Result |
 |---|---|
 | `dotnet build NexaOps.slnx -warnaserror` | **0 warnings, 0 errors** |
-| `dotnet test NexaOps.slnx` | **438 passing** |
+| `dotnet test NexaOps.slnx` | **469 passing** |
 | `npm run typecheck` | Clean |
 | `npm run lint` | Clean |
 | `npm run test` | **38 passing** |
@@ -25,7 +26,7 @@ detail as the achievements.
 | `npm audit` | No advisories |
 | gitleaks (full history) | No secrets |
 
-476 tests total (263 domain, 31 application, 144 integration, 38 front end). Breakdown and
+507 tests total (282 domain, 31 application, 156 integration, 38 front end). Breakdown and
 strategy in [TESTING.md](TESTING.md).
 
 > Two of these gates were previously reported as passing when they were not. `dotnet build`
@@ -75,6 +76,29 @@ strategy in [TESTING.md](TESTING.md).
   abandons its clock rather than breaching it. Targets are working days — one, two, three, five
   and ten — because that is how delivery is actually promised.
 - A requester may withdraw their own request without holding `request.cancel`.
+
+### CMDB — complete (API and tests; no UI yet)
+
+- **Impact analysis is pure graph arithmetic**, testable without a database and identical
+  whether called from a change's impact assessment or a CI record page. It answers both
+  directions: what breaks if this fails, and what this relies on.
+- **Direction is not symmetric.** A database depending on a server is a different statement from
+  the reverse, and treating the edge as undirected would make the answers useless.
+- **The shallowest path wins**, so an item reachable at both one and four hops is reported as
+  directly affected rather than distantly. Depth is capped at six — a real CMDB accumulates long
+  chains, and a walk that follows all of them turns a record page into a timeout.
+- **Cyclic graphs terminate.** Two servers that each fail over to the other is a cycle, and a
+  correct one.
+- **Deliberately not a state machine.** A CMDB reflects reality rather than governing it: a
+  server disposed of and then found in a cupboard really can return to service, and refusing that
+  only teaches people to keep a spreadsheet instead.
+- Out-of-support cover is a first-class question rather than a report, because an expired
+  warranty discovered during an outage is the most expensive way to learn about it.
+- The graph cannot be made to span a tenant boundary: the target look-up is tenant-filtered, so
+  a neighbour's item reads as non-existent.
+
+**Not built:** a CMDB user interface. Items and relationships are managed through the API, and
+CMDB stays marked "Later" in the navigation until the pages exist.
 
 ### Knowledge Base — complete
 
@@ -182,7 +206,7 @@ be demonstrated until some are created through the API.
 
 These appear in the navigation marked **"Later"** and are not clickable. Nothing pretends to work.
 
-CMDB, asset management, the visual workflow engine, reporting and dashboard builder, settings,
+Asset management, the visual workflow engine, reporting and dashboard builder, settings,
 virtual agent, mobile apps, inbound email, third-party integrations.
 
 Problems and Changes have list and record pages; neither has a create form in the UI yet, so
@@ -307,7 +331,7 @@ detail in [SECURITY.md §7](SECURITY.md) and [TESTING.md §9](TESTING.md).
 
 ## 7. Next implementation phase
 
-**Recommended: CMDB, then Asset Management.**
+**Recommended: a CMDB user interface, then Asset Management.**
 
 Why this and not something else:
 
