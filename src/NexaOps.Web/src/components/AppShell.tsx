@@ -23,6 +23,7 @@ import {
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
+import TroubleshootOutlinedIcon from '@mui/icons-material/TroubleshootOutlined';
 import StorefrontOutlinedIcon from '@mui/icons-material/StorefrontOutlined';
 import HowToRegOutlinedIcon from '@mui/icons-material/HowToRegOutlined';
 import ConfirmationNumberOutlinedIcon from '@mui/icons-material/ConfirmationNumberOutlined';
@@ -98,7 +99,12 @@ const NAVIGATION: NavSection[] = [
         icon: <HowToRegOutlinedIcon />,
         permission: Permissions.approvalAct,
       },
-      { label: 'Problems', to: '/problems', icon: <ConfirmationNumberOutlinedIcon />, comingSoon: true },
+      {
+        label: 'Problems',
+        to: '/problems',
+        icon: <TroubleshootOutlinedIcon />,
+        permission: Permissions.problemRead,
+      },
       { label: 'Changes', to: '/changes', icon: <ConfirmationNumberOutlinedIcon />, comingSoon: true },
       { label: 'Knowledge', to: '/knowledge', icon: <ConfirmationNumberOutlinedIcon />, comingSoon: true },
     ],

@@ -38,6 +38,19 @@ export const Permissions = {
   requestWorkNoteRead: 'request.worknote.read',
   requestWorkNoteCreate: 'request.worknote.create',
 
+  problemRead: 'problem.read',
+  problemCreate: 'problem.create',
+  problemUpdate: 'problem.update',
+  problemAssign: 'problem.assign',
+  problemInvestigate: 'problem.investigate',
+  problemPublishKnownError: 'problem.publish_known_error',
+  problemResolve: 'problem.resolve',
+  problemClose: 'problem.close',
+  problemCancel: 'problem.cancel',
+  problemCommentCreate: 'problem.comment.create',
+  problemWorkNoteRead: 'problem.worknote.read',
+  problemLinkIncident: 'problem.link_incident',
+
   approvalAct: 'approval.act',
   approvalReadAll: 'approval.read.all',
 

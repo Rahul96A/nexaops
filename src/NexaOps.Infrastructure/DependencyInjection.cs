@@ -13,6 +13,7 @@ using NexaOps.Application.Abstractions;
 using NexaOps.Application.Ai;
 using NexaOps.Application.Identity;
 using NexaOps.Application.Incidents;
+using NexaOps.Application.Problems;
 using NexaOps.Application.Requests;
 using NexaOps.Application.Notifications;
 using NexaOps.Application.Sla;
@@ -124,6 +125,10 @@ public static class DependencyInjection
         services.AddScoped<ICatalogRepository, CatalogRepository>();
         services.AddScoped<IApprovalRepository, ApprovalRepository>();
         services.AddScoped<IRequestQueryService, RequestQueryService>();
+
+        // Problem management.
+        services.AddScoped<IProblemRepository, ProblemRepository>();
+        services.AddScoped<IProblemQueryService, ProblemQueryService>();
 
         services.AddScoped<IIncidentQueryService, IncidentQueryService>();
         services.AddScoped<IServiceDeskReferenceRepository, ServiceDeskReferenceRepository>();

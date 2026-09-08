@@ -6,6 +6,7 @@ using NexaOps.Domain.Catalog;
 using NexaOps.Domain.Common;
 using NexaOps.Domain.Identity;
 using NexaOps.Domain.Platform;
+using NexaOps.Domain.Problems;
 using NexaOps.Domain.Requests;
 using NexaOps.Domain.ServiceDesk;
 using NexaOps.Domain.Sla;
@@ -195,6 +196,10 @@ public class NexaOpsDbContext : DbContext
     public DbSet<RequestItem> RequestItems => Set<RequestItem>();
     public DbSet<RequestComment> RequestComments => Set<RequestComment>();
     public DbSet<Approval> Approvals => Set<Approval>();
+
+    // --- Problem management ---
+    public DbSet<Problem> Problems => Set<Problem>();
+    public DbSet<ProblemComment> ProblemComments => Set<ProblemComment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

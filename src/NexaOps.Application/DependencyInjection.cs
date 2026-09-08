@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NexaOps.Application.Ai;
 using NexaOps.Application.Ai.Tools;
 using NexaOps.Application.Incidents;
+using NexaOps.Application.Problems;
 using NexaOps.Application.Requests;
 using NexaOps.Application.Sla;
 
@@ -22,6 +23,9 @@ public static class DependencyInjection
         services.AddScoped<IRequestService, RequestService>();
         services.AddScoped<ICatalogService, CatalogService>();
         services.AddScoped<IApprovalService, ApprovalService>();
+
+        // Problem management.
+        services.AddScoped<IProblemService, ProblemService>();
         services.AddScoped<ISlaService, SlaService>();
 
         // Validators are discovered by assembly scan so a new command validator is picked up

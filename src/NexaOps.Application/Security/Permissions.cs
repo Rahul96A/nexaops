@@ -153,6 +153,37 @@ public static class Permissions
     public const string ApprovalReadAll = "approval.read.all";
 
     // ---------------------------------------------------------------
+    // Problem
+    // ---------------------------------------------------------------
+
+    /// <summary>
+    /// Read problems and, crucially, their published workarounds. Every authenticated user holds
+    /// this: a known error the service desk cannot see is a known error that helps nobody.
+    /// </summary>
+    public const string ProblemRead = "problem.read";
+
+    public const string ProblemCreate = "problem.create";
+    public const string ProblemUpdate = "problem.update";
+    public const string ProblemAssign = "problem.assign";
+
+    /// <summary>Record root cause, confidence and workaround.</summary>
+    public const string ProblemInvestigate = "problem.investigate";
+
+    /// <summary>Publish a known error, which the whole service desk then relies on.</summary>
+    public const string ProblemPublishKnownError = "problem.publish_known_error";
+
+    public const string ProblemResolve = "problem.resolve";
+    public const string ProblemClose = "problem.close";
+    public const string ProblemCancel = "problem.cancel";
+    public const string ProblemCommentCreate = "problem.comment.create";
+
+    /// <summary>See internal investigation notes. Requesters never hold this.</summary>
+    public const string ProblemWorkNoteRead = "problem.worknote.read";
+
+    /// <summary>Link and unlink incidents to a problem.</summary>
+    public const string ProblemLinkIncident = "problem.link_incident";
+
+    // ---------------------------------------------------------------
     // Reporting
     // ---------------------------------------------------------------
 
@@ -241,6 +272,19 @@ public static class Permissions
 
         new(ApprovalAct, "Approval", "Act on approvals", "Approve or reject approvals addressed to the user."),
         new(ApprovalReadAll, "Approval", "View all approvals", "Read every approval in the tenant."),
+
+        new(ProblemRead, "Problem", "View problems", "Read problems and their published workarounds."),
+        new(ProblemCreate, "Problem", "Raise problems", "Create problem records."),
+        new(ProblemUpdate, "Problem", "Edit problems", "Change problem fields and classification."),
+        new(ProblemAssign, "Problem", "Assign problems", "Set the assignment group, assignee and owner."),
+        new(ProblemInvestigate, "Problem", "Record findings", "Record root cause, confidence and workaround."),
+        new(ProblemPublishKnownError, "Problem", "Publish known errors", "Publish a problem as a known error the service desk relies on."),
+        new(ProblemResolve, "Problem", "Resolve problems", "Record a permanent fix and resolve the problem."),
+        new(ProblemClose, "Problem", "Close problems", "Close a resolved problem."),
+        new(ProblemCancel, "Problem", "Cancel problems", "Cancel a problem that will not be pursued."),
+        new(ProblemCommentCreate, "Problem", "Add problem comments", "Add comments and investigation notes."),
+        new(ProblemWorkNoteRead, "Problem", "View problem work notes", "Read internal investigation notes."),
+        new(ProblemLinkIncident, "Problem", "Link incidents", "Link and unlink incidents to a problem."),
 
         new(ReportView, "Reporting", "View reports", "Open dashboards and reports."),
         new(ReportExport, "Reporting", "Export reports", "Export report output to file."),

@@ -19,6 +19,8 @@ import { OrderCatalogItemPage } from '@/features/catalog/OrderCatalogItemPage';
 import { RequestListPage } from '@/features/requests/RequestListPage';
 import { RequestDetailPage } from '@/features/requests/RequestDetailPage';
 import { ApprovalsPage } from '@/features/approvals/ApprovalsPage';
+import { ProblemListPage } from '@/features/problems/ProblemListPage';
+import { ProblemDetailPage } from '@/features/problems/ProblemDetailPage';
 import { AuditPage } from '@/features/audit/AuditPage';
 import { NotFoundPage } from '@/features/NotFoundPage';
 
@@ -132,6 +134,24 @@ export function App() {
             element={
               <RequireAuth permission={Permissions.approvalAct}>
                 <ApprovalsPage />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="problems"
+            element={
+              <RequireAuth permission={Permissions.problemRead}>
+                <ProblemListPage />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="problems/:id"
+            element={
+              <RequireAuth permission={Permissions.problemRead}>
+                <ProblemDetailPage />
               </RequireAuth>
             }
           />

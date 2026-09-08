@@ -734,3 +734,139 @@ export interface DecideApprovalRequest {
   approved: boolean;
   comment?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Problem management
+// ---------------------------------------------------------------------------
+
+export type ProblemStatus =
+  | 'New'
+  | 'Investigating'
+  | 'KnownError'
+  | 'FixInProgress'
+  | 'Resolved'
+  | 'Closed'
+  | 'Cancelled';
+
+export type ProblemOrigin = 'FromIncident' | 'Proactive' | 'Vendor' | 'PostIncidentReview';
+
+export type RootCauseConfidence = 'Suspected' | 'Probable' | 'Confirmed';
+
+export interface ProblemSummary {
+  id: string;
+  number: string;
+  title: string;
+  status: ProblemStatus;
+  priority: Priority;
+  origin: ProblemOrigin;
+  assignedToUserId?: string | null;
+  assignedToName?: string | null;
+  assignedToAvatarColor?: string | null;
+  ownerUserId?: string | null;
+  ownerName?: string | null;
+  assignmentGroupId?: string | null;
+  assignmentGroupName?: string | null;
+  categoryId?: string | null;
+  categoryName?: string | null;
+  hasWorkaround: boolean;
+  linkedIncidentCount: number;
+  isMajorProblem: boolean;
+  createdAt: string;
+}
+
+export interface LinkedIncident {
+  id: string;
+  number: string;
+  title: string;
+  status: IncidentStatus;
+  priority: Priority;
+  createdAt: string;
+}
+
+export interface ProblemComment {
+  id: string;
+  kind: IncidentCommentKind;
+  body: string;
+  authorId: string;
+  authorDisplayName: string;
+  createdAt: string;
+}
+
+export interface ProblemDetail {
+  id: string;
+  number: string;
+  title: string;
+  description: string;
+  status: ProblemStatus;
+  priority: Priority;
+  origin: ProblemOrigin;
+  categoryId?: string | null;
+  categoryName?: string | null;
+  subcategoryId?: string | null;
+  subcategoryName?: string | null;
+  assignmentGroupId?: string | null;
+  assignmentGroupName?: string | null;
+  assignedToUserId?: string | null;
+  assignedToName?: string | null;
+  ownerUserId?: string | null;
+  ownerName?: string | null;
+  rootCause?: string | null;
+  rootCauseConfidence?: RootCauseConfidence | null;
+  workaround?: string | null;
+  permanentFix?: string | null;
+  isMajorProblem: boolean;
+  linkedIncidentCount: number;
+  investigationStartedAt?: string | null;
+  knownErrorAt?: string | null;
+  resolvedAt?: string | null;
+  closedAt?: string | null;
+  createdAt: string;
+  linkedIncidents: LinkedIncident[];
+  allowedTransitions: ProblemStatus[];
+  rowVersion?: string | null;
+}
+
+export interface ProblemStatusCount {
+  status: ProblemStatus;
+  count: number;
+}
+
+export interface ProblemSummaryCounts {
+  openProblems: number;
+  investigating: number;
+  knownErrors: number;
+  assignedToMe: number;
+  ownedByMe: number;
+  unassigned: number;
+  majorProblems: number;
+  openByStatus: ProblemStatusCount[];
+}
+
+export interface ProblemSearchParams {
+  search?: string;
+  status?: string;
+  priority?: string;
+  scope?: string;
+  openOnly?: boolean;
+  knownErrorsOnly?: boolean;
+  sortBy?: string;
+  sortDescending?: boolean;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface CreateProblemRequest {
+  title: string;
+  description?: string;
+  categoryId?: string | null;
+  priority?: Priority;
+  origin?: ProblemOrigin;
+  fromIncidentId?: string | null;
+}
+
+export interface RecordFindingsRequest {
+  rootCause?: string;
+  confidence?: RootCauseConfidence;
+  workaround?: string;
+  permanentFix?: string;
+}

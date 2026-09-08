@@ -46,6 +46,8 @@ public static class SystemRoles
         Permissions.RequestCreate,
         Permissions.RequestCommentCreate,
 
+        Permissions.ProblemRead,
+
         // Granted to everyone because approval is scoped by the approval record itself, not by
         // this permission: holding it lets a user act on approvals addressed to them and on
         // nothing else. Line-manager approval means any employee may be an approver, so gating
@@ -80,7 +82,14 @@ public static class SystemRoles
         Permissions.RequestFulfil,
         Permissions.RequestClose,
         Permissions.RequestWorkNoteRead,
-        Permissions.RequestWorkNoteCreate
+        Permissions.RequestWorkNoteCreate,
+
+        Permissions.ProblemCreate,
+        Permissions.ProblemUpdate,
+        Permissions.ProblemInvestigate,
+        Permissions.ProblemCommentCreate,
+        Permissions.ProblemWorkNoteRead,
+        Permissions.ProblemLinkIncident
     ];
 
     private static readonly string[] ServiceDeskManagerPermissions =
@@ -102,7 +111,15 @@ public static class SystemRoles
         // approval backlog are management acts, not agent acts.
         Permissions.RequestCancel,
         Permissions.CatalogManage,
-        Permissions.ApprovalReadAll
+        Permissions.ApprovalReadAll,
+
+        // Publishing a known error commits the whole service desk to a workaround, and
+        // resolving a problem asserts the cause is gone. Both are management acts.
+        Permissions.ProblemAssign,
+        Permissions.ProblemPublishKnownError,
+        Permissions.ProblemResolve,
+        Permissions.ProblemClose,
+        Permissions.ProblemCancel
     ];
 
     /// <summary>The seed definition of one role.</summary>
@@ -182,7 +199,17 @@ public static class SystemRoles
                 Permissions.AiAssistantUse,
                 Permissions.RequestReadAll,
                 Permissions.RequestWorkNoteRead,
-                Permissions.ApprovalReadAll
+                Permissions.ApprovalReadAll,
+                Permissions.ProblemCreate,
+                Permissions.ProblemUpdate,
+                Permissions.ProblemAssign,
+                Permissions.ProblemInvestigate,
+                Permissions.ProblemPublishKnownError,
+                Permissions.ProblemResolve,
+                Permissions.ProblemClose,
+                Permissions.ProblemCommentCreate,
+                Permissions.ProblemWorkNoteRead,
+                Permissions.ProblemLinkIncident
             ]),
 
         new(Approver,

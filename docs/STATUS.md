@@ -1,7 +1,8 @@
 # NexaOps — Status
 
-**As of 8 September 2026.** Phase 1 (platform foundation), Incident Management, and Phase 2
-(Service Requests, Service Catalogue and Approvals), plus a demo environment.
+**As of 8 September 2026.** Phase 1 (platform foundation), Incident Management, Phase 2
+(Service Requests, Service Catalogue and Approvals) and Phase 3 (Problem Management), plus a
+demo environment.
 
 This document is written to be handed to someone who has to decide whether to rely on this. It
 lists what works, what does not, and what is deliberately absent — with the gaps in the same
@@ -14,7 +15,7 @@ detail as the achievements.
 | Gate | Result |
 |---|---|
 | `dotnet build NexaOps.slnx -warnaserror` | **0 warnings, 0 errors** |
-| `dotnet test NexaOps.slnx` | **325 passing** |
+| `dotnet test NexaOps.slnx` | **363 passing** |
 | `npm run typecheck` | Clean |
 | `npm run lint` | Clean |
 | `npm run test` | **38 passing** |
@@ -24,7 +25,7 @@ detail as the achievements.
 | `npm audit` | No advisories |
 | gitleaks (full history) | No secrets |
 
-363 tests total (189 domain, 31 application, 105 integration, 38 front end). Breakdown and
+401 tests total (215 domain, 31 application, 117 integration, 38 front end). Breakdown and
 strategy in [TESTING.md](TESTING.md).
 
 > Two of these gates were previously reported as passing when they were not. `dotnet build`
@@ -75,6 +76,23 @@ strategy in [TESTING.md](TESTING.md).
   and ten — because that is how delivery is actually promised.
 - A requester may withdraw their own request without holding `request.cancel`.
 
+### Problem Management — complete
+
+- **Known error is a resting state, not a waypoint.** A published workaround delivers value even
+  if the permanent fix is never funded, and the lifecycle says so — but it still counts as open
+  work, so reporting cannot hide a backlog of unfunded fixes.
+- Publishing a known error **requires both a root cause and a workaround**, because it tells the
+  whole service desk there is something they can do. Resolving requires a recorded permanent fix.
+- **Investigating and publishing are separate permissions.** An agent records findings; a manager
+  commits the desk to them.
+- Problems are readable tenant-wide, unlike incidents and requests — a known error the person on
+  the phone cannot find helps nobody. Internal investigation notes are still filtered at the
+  query level.
+- Incidents are attributed to a problem and the count is recomputed from the incidents
+  themselves, so a link made by any other route still produces a correct figure.
+- **Deliberately not SLA-tracked.** Investigation is open-ended work whose value is in being done
+  properly; a countdown would push teams to close problems rather than solve them.
+
 ### Incident Management — complete
 
 Full lifecycle: New → Assigned → In progress → Pending → Resolved → Closed, with Cancelled, and
@@ -124,9 +142,9 @@ be demonstrated until some are created through the API.
 
 These appear in the navigation marked **"Later"** and are not clickable. Nothing pretends to work.
 
-Problem management, change management and CAB, knowledge base, CMDB, asset management, the
-visual workflow engine, reporting and dashboard builder, settings, virtual agent, mobile apps,
-inbound email, third-party integrations.
+Change management and CAB, knowledge base, CMDB, asset management, the visual workflow engine,
+reporting and dashboard builder, settings, virtual agent, mobile apps, inbound email,
+third-party integrations.
 
 The foundation they share — tenancy, identity, permissions, audit, notifications, attachments,
 number sequences, module-agnostic `RecordRelations`, and now module-agnostic approvals — is built
@@ -247,7 +265,7 @@ detail in [SECURITY.md §7](SECURITY.md) and [TESTING.md §9](TESTING.md).
 
 ## 7. Next implementation phase
 
-**Recommended: Problem Management.**
+**Recommended: Change Management and CAB.**
 
 Why this and not something else:
 
