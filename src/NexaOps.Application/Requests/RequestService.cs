@@ -6,12 +6,14 @@ using NexaOps.Application.Common;
 using NexaOps.Application.Incidents;
 using NexaOps.Application.Notifications;
 using NexaOps.Application.Security;
+using NexaOps.Application.Sla;
 using NexaOps.Domain.Approvals;
 using NexaOps.Domain.Auditing;
 using NexaOps.Domain.Catalog;
 using NexaOps.Domain.Common;
 using NexaOps.Domain.Platform;
 using NexaOps.Domain.Requests;
+using NexaOps.Domain.Sla;
 using NexaOps.Domain.ServiceDesk;
 
 namespace NexaOps.Application.Requests;
@@ -70,6 +72,7 @@ public sealed class RequestService : IRequestService
     private readonly IApprovalService _approvals;
     private readonly IServiceDeskReferenceRepository _reference;
     private readonly INumberSequenceService _numbers;
+    private readonly ISlaService _sla;
     private readonly INotificationService _notifications;
     private readonly IAuditService _audit;
     private readonly IUnitOfWork _unitOfWork;
@@ -84,6 +87,7 @@ public sealed class RequestService : IRequestService
         IApprovalService approvals,
         IServiceDeskReferenceRepository reference,
         INumberSequenceService numbers,
+        ISlaService sla,
         INotificationService notifications,
         IAuditService audit,
         IUnitOfWork unitOfWork,
@@ -97,6 +101,7 @@ public sealed class RequestService : IRequestService
         _approvals = approvals;
         _reference = reference;
         _numbers = numbers;
+        _sla = sla;
         _notifications = notifications;
         _audit = audit;
         _unitOfWork = unitOfWork;
@@ -320,11 +325,19 @@ public sealed class RequestService : IRequestService
 
         request.Submit(approvalRaised, _currentUser.UserId, now);
 
-        // No SLA clock is attached yet. SlaInstance is addressed by Module + RecordId and the
-        // schema supports requests, but ISlaService is still typed against Incident, so the
-        // engine cannot be driven from here without generalising it. Attaching nothing is the
-        // honest option: HasBreachedSla and NextSlaDueAt stay false and null rather than
-        // carrying figures no clock produced. See docs/STATUS.md.
+        // Clocks attach on submission and immediately reflect whether the request is waiting on
+        // an approver: RequestStateMachine.PausesSla says AwaitingApproval pauses, so the
+        // fulfilment commitment does not run against a desk that has not been authorised to act.
+        await _sla.AttachClocksAsync(request, ct).ConfigureAwait(false);
+
+        if (RequestStateMachine.PausesSla(request.Status))
+        {
+            await _sla.OnStatusChangedAsync(
+                    request,
+                    new SlaStatusChange(WasPaused: false, IsPaused: true),
+                    ct)
+                .ConfigureAwait(false);
+        }
 
         _audit.Record(
             AuditAction.Create,
@@ -352,7 +365,10 @@ public sealed class RequestService : IRequestService
         ArgumentNullException.ThrowIfNull(command);
         _currentUser.DemandPermission(Permissions.RequestUpdate);
 
-        var request = await LoadAsync(id, ct).ConfigureAwait(false);
+        // Loaded with clocks, because a priority change re-targets live commitments.
+        var request = await _requests.GetWithClocksAsync(id, ct).ConfigureAwait(false)
+                      ?? throw new EntityNotFoundException(EntityType, id);
+
         ApplyConcurrencyToken(request, command.RowVersion);
 
         if (!string.IsNullOrWhiteSpace(command.Title))
@@ -376,6 +392,8 @@ public sealed class RequestService : IRequestService
         if (command.Priority is not null && command.Priority != request.Priority)
         {
             request.Priority = command.Priority.Value;
+
+            await _sla.OnPriorityChangedAsync(request, ct).ConfigureAwait(false);
         }
 
         if (command.RequiredByDate is not null)
@@ -484,6 +502,10 @@ public sealed class RequestService : IRequestService
             request.TransitionTo(command.Status, _currentUser.UserId, now);
         }
 
+        // The request lifecycle is translated into the engine's vocabulary, so one set of SLA
+        // rules serves both modules while each keeps its own statuses.
+        await _sla.OnStatusChangedAsync(request, RequestSlaMapping.For(request, previous), ct)
+            .ConfigureAwait(false);
 
         _audit.Record(
             AuditAction.Update,
@@ -565,7 +587,12 @@ public sealed class RequestService : IRequestService
         ApplyConcurrencyToken(request, command.RowVersion);
 
         var now = _clock.UtcNow;
+        var previous = request.Status;
         request.Cancel(command.Reason, _currentUser.UserId, now);
+
+        // Abandoned, not breached: nobody failed a commitment on work that was called off.
+        await _sla.OnStatusChangedAsync(request, RequestSlaMapping.For(request, previous), ct)
+            .ConfigureAwait(false);
 
         await _approvals.CancelOutstandingAsync(ApprovalModule, request.Id, ct).ConfigureAwait(false);
 
@@ -661,6 +688,13 @@ public sealed class RequestService : IRequestService
             case ApprovalRecordOutcome.Approved:
                 decided.RecordApproved(_currentUser.UserId, now);
 
+                // The fulfilment clock starts only now: the desk could not act before.
+                await _sla.OnStatusChangedAsync(
+                        decided,
+                        RequestSlaMapping.For(decided, RequestStatus.AwaitingApproval),
+                        ct)
+                    .ConfigureAwait(false);
+
                 // The fulfilment clock starts only now, because the desk could not act before.
 
                 NotifyRequester(decided, NotificationKind.ApprovalDecided, NotificationSeverity.Success,
@@ -669,6 +703,12 @@ public sealed class RequestService : IRequestService
 
             case ApprovalRecordOutcome.Rejected:
                 decided.RecordRejected(command.Comment ?? "No reason given.", _currentUser.UserId, now);
+
+                await _sla.OnStatusChangedAsync(
+                        decided,
+                        RequestSlaMapping.For(decided, RequestStatus.AwaitingApproval),
+                        ct)
+                    .ConfigureAwait(false);
 
                 await _approvals.CancelOutstandingAsync(ApprovalModule, decided.Id, ct).ConfigureAwait(false);
 

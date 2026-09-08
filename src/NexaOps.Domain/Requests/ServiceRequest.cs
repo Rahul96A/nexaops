@@ -18,7 +18,7 @@ namespace NexaOps.Domain.Requests;
 /// authorising before anyone starts.
 /// </para>
 /// </summary>
-public class ServiceRequest : TenantEntity
+public class ServiceRequest : TenantEntity, ISlaTracked
 {
     /// <summary>Human-facing identifier, e.g. REQ0001042. Unique per tenant, never reused.</summary>
     public string Number { get; set; } = string.Empty;
@@ -75,6 +75,17 @@ public class ServiceRequest : TenantEntity
 
     /// <summary>Total indicative cost of the lines, captured when the request was submitted.</summary>
     public decimal? TotalCost { get; set; }
+
+    // --- SLA engine contract (ISlaTracked) ---
+
+    /// <summary>Requests own the Request module's policies.</summary>
+    public ServiceModule SlaModule => ServiceModule.Request;
+
+    /// <summary>Requests classify to a category only; there is no subcategory concept.</summary>
+    public Guid? SlaSubcategoryId => null;
+
+    /// <summary>The fulfilment group is the owning group for policy matching.</summary>
+    public Guid? SlaGroupId => FulfilmentGroupId;
 
     // --- Navigation ---
     public User? Requester { get; set; }

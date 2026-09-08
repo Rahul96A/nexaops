@@ -42,8 +42,6 @@ public interface IIncidentRepository
 
     void RemoveTags(IEnumerable<IncidentTag> tags);
 
-    void AddSlaInstance(SlaInstance instance);
-
     /// <summary>
     /// Running or paused SLA clocks whose deadline or warning threshold has passed, across all
     /// tenants. Used only by the background SLA monitor, which establishes each tenant scope

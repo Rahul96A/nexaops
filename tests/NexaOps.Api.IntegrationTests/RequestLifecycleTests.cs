@@ -434,6 +434,89 @@ public sealed class RequestLifecycleTests
     }
 
     // -----------------------------------------------------------------
+    // SLA
+    // -----------------------------------------------------------------
+
+    [Fact]
+    public async Task A_request_awaiting_approval_has_a_clock_that_is_not_running()
+    {
+        var admin = await _environment.ClientForAsync(_environment.Acme.Manager);
+        var employee = await _environment.ClientForAsync(_environment.Acme.Employee);
+
+        var item = await PublishItemWithChoiceAsync(
+            admin, "SLA-PAUSED", approverUserId: _environment.Acme.Manager.Id);
+
+        var request = await OrderAsync(employee, item.Id);
+
+        request.Status.ShouldBe(RequestStatus.AwaitingApproval);
+
+        // A commitment exists and its deadline is known, but the service desk is not being
+        // charged for time it has not been authorised to act in.
+        request.NextSlaDueAt.ShouldNotBeNull();
+        request.HasBreachedSla.ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Approval_starts_the_fulfilment_clock_and_delivery_meets_it()
+    {
+        var admin = await _environment.ClientForAsync(_environment.Acme.Manager);
+        var employee = await _environment.ClientForAsync(_environment.Acme.Employee);
+        var manager = await _environment.ClientForAsync(_environment.Acme.Manager);
+
+        var item = await PublishItemWithChoiceAsync(
+            admin, "SLA-RUNS", approverUserId: _environment.Acme.Manager.Id);
+
+        var request = await OrderAsync(employee, item.Id);
+
+        var approved = await manager.PostAsJsonAsync(
+            $"/api/v1/approvals/{request.Approvals.Single().Id}/decide",
+            new DecideApprovalCommand { Approved = true });
+
+        approved.EnsureSuccessStatusCode();
+
+        var running = await approved.Content.ReadFromJsonAsync<RequestDetailDto>(TestEnvironment.Json);
+        running!.Status.ShouldBe(RequestStatus.Approved);
+        running.NextSlaDueAt.ShouldNotBeNull();
+
+        await manager.PostAsJsonAsync(
+            $"/api/v1/requests/{request.Id}/items/{request.Items.Single().Id}/fulfil",
+            new FulfilRequestItemCommand());
+
+        var completed = await manager.PostAsJsonAsync(
+            $"/api/v1/requests/{request.Id}/status",
+            new ChangeRequestStatusCommand { Status = RequestStatus.Fulfilled });
+
+        completed.EnsureSuccessStatusCode();
+
+        var final = await completed.Content.ReadFromJsonAsync<RequestDetailDto>(TestEnvironment.Json);
+
+        // The commitment was met, so there is no live clock left and nothing breached.
+        final!.HasBreachedSla.ShouldBeFalse();
+        final.NextSlaDueAt.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Cancelling_abandons_the_clock_rather_than_breaching_it()
+    {
+        var admin = await _environment.ClientForAsync(_environment.Acme.Manager);
+        var employee = await _environment.ClientForAsync(_environment.Acme.Employee);
+
+        var item = await PublishItemWithChoiceAsync(admin, "SLA-CANCEL");
+        var request = await OrderAsync(employee, item.Id);
+
+        var cancelled = await employee.PostAsJsonAsync($"/api/v1/requests/{request.Id}/cancel",
+            new CancelRequestCommand { Reason = "No longer needed." });
+
+        cancelled.EnsureSuccessStatusCode();
+
+        var final = await cancelled.Content.ReadFromJsonAsync<RequestDetailDto>(TestEnvironment.Json);
+
+        // Nobody failed a commitment on work that was called off.
+        final!.HasBreachedSla.ShouldBeFalse();
+        final.NextSlaDueAt.ShouldBeNull();
+    }
+
+    // -----------------------------------------------------------------
     // Visibility
     // -----------------------------------------------------------------
 

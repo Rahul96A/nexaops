@@ -14,7 +14,7 @@ detail as the achievements.
 | Gate | Result |
 |---|---|
 | `dotnet build NexaOps.slnx -warnaserror` | **0 warnings, 0 errors** |
-| `dotnet test NexaOps.slnx` | **322 passing** |
+| `dotnet test NexaOps.slnx` | **325 passing** |
 | `npm run typecheck` | Clean |
 | `npm run lint` | Clean |
 | `npm run test` | **38 passing** |
@@ -24,7 +24,7 @@ detail as the achievements.
 | `npm audit` | No advisories |
 | gitleaks (full history) | No secrets |
 
-360 tests total (189 domain, 31 application, 102 integration, 38 front end). Breakdown and
+363 tests total (189 domain, 31 application, 105 integration, 38 front end). Breakdown and
 strategy in [TESTING.md](TESTING.md).
 
 > Two of these gates were previously reported as passing when they were not. `dotnet build`
@@ -69,6 +69,10 @@ strategy in [TESTING.md](TESTING.md).
   one approval, not two. Holding `approval.act` is not sufficient to decide — the record itself
   says who may, and a non-addressee gets 404 rather than 403.
 - **Fulfilment** per line, with the request completing only once every line has settled.
+- **A fulfilment SLA clock**, paused for the whole time the request waits on an approver. The
+  desk is not charged for time it has not been authorised to act in, and a cancelled request
+  abandons its clock rather than breaching it. Targets are working days — one, two, three, five
+  and ten — because that is how delivery is actually promised.
 - A requester may withdraw their own request without holding `request.cancel`.
 
 ### Incident Management — complete
@@ -129,10 +133,11 @@ number sequences, module-agnostic `RecordRelations`, and now module-agnostic app
 and tested. `Category` carries a `Module` discriminator, and Phase 2 exercised all of it without
 reworking the platform.
 
-The one part that did **not** turn out to be module-agnostic was the SLA service. `SlaInstance`
-storage is addressed by `Module` + `RecordId`, but `ISlaService` is typed against `Incident`
-throughout, so requests currently attach no clock. Generalising it is the first task of the next
-phase.
+The SLA service was the one part that did **not** turn out to be module-agnostic — its storage
+was addressed by `Module` + `RecordId`, but the service was typed against `Incident` throughout.
+It has since been generalised against an `ISlaTracked` domain interface, and each module
+translates its own lifecycle into a shared `SlaStatusChange` vocabulary. Requests now carry
+fulfilment clocks.
 
 ---
 
@@ -153,7 +158,6 @@ Grouped by how much they should worry you.
 
 | Limitation | Consequence |
 |---|---|
-| **Requests carry no SLA clock.** `SlaInstance` is addressed by `Module` + `RecordId` and the schema supports requests, but `ISlaService` is typed against `Incident` throughout | `HasBreachedSla` stays false and `NextSlaDueAt` null on every request. This corrects an overstatement in the Phase 1 report: the SLA *storage* was module-agnostic, the *service* was not |
 | **No catalogue editor in the UI** | Items are created, published and retired through the API only |
 | **No demo seed data for the catalogue** | A fresh demo starts with an empty catalogue; items must be created before requests can be raised |
 | **Approval stages are single-stage in practice** | The model supports ordered stages and the arithmetic is tested, but nothing configures more than one |
@@ -243,7 +247,7 @@ detail in [SECURITY.md §7](SECURITY.md) and [TESTING.md §9](TESTING.md).
 
 ## 7. Next implementation phase
 
-**Recommended: generalise `ISlaService` so requests get SLA clocks, then Problem Management.**
+**Recommended: Problem Management.**
 
 Why this and not something else:
 

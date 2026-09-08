@@ -16,8 +16,11 @@ public interface IRequestRepository
 {
     Task<ServiceRequest?> GetAsync(Guid id, CancellationToken cancellationToken = default);
 
-    /// <summary>Loads a request with its lines and approvals, for a decision or a fulfilment.</summary>
+    /// <summary>Loads a request with its lines and SLA clocks, for a decision or a fulfilment.</summary>
     Task<ServiceRequest?> GetWithLinesAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>Loads a request with its SLA clocks only, for a status or priority change.</summary>
+    Task<ServiceRequest?> GetWithClocksAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task<ServiceRequest?> GetByNumberAsync(string number, CancellationToken cancellationToken = default);
 

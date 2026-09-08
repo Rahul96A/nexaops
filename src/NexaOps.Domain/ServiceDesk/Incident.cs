@@ -13,7 +13,7 @@ namespace NexaOps.Domain.ServiceDesk;
 /// workflow engine, or a confirmed AI proposal - is driving the change.
 /// </para>
 /// </summary>
-public class Incident : TenantEntity
+public class Incident : TenantEntity, ISlaTracked, ISlaProgressFacts
 {
     /// <summary>Human-facing identifier, e.g. INC0001042. Unique per tenant, never reused.</summary>
     public string Number { get; set; } = string.Empty;
@@ -86,6 +86,20 @@ public class Incident : TenantEntity
 
     /// <summary>Earliest outstanding SLA due time across this incident. Used for queue ordering.</summary>
     public DateTimeOffset? NextSlaDueAt { get; set; }
+
+    // --- SLA engine contract (ISlaTracked) ---
+
+    /// <summary>Incidents own the Incident module's policies.</summary>
+    public ServiceModule SlaModule => ServiceModule.Incident;
+
+    /// <summary>Incidents classify to a subcategory; other modules may not.</summary>
+    public Guid? SlaSubcategoryId => SubcategoryId;
+
+    /// <summary>The assignment group is the owning group for policy matching.</summary>
+    public Guid? SlaGroupId => AssignmentGroupId;
+
+    /// <summary>Resolution settles the resolution commitment; closure does not restate it.</summary>
+    public DateTimeOffset? SlaCompletedAt => ResolvedAt;
 
     // --- Navigation ---
     public User? Requester { get; set; }

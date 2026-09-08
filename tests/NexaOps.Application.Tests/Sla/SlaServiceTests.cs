@@ -22,7 +22,7 @@ public sealed class SlaServiceTests
     private static readonly Guid Actor = Guid.NewGuid();
 
     private readonly ISlaRepository _repository = Substitute.For<ISlaRepository>();
-    private readonly IIncidentSlaWriter _writer = Substitute.For<IIncidentSlaWriter>();
+    private readonly ISlaInstanceWriter _writer = Substitute.For<ISlaInstanceWriter>();
     private readonly IDateTimeProvider _clock = Substitute.For<IDateTimeProvider>();
     private readonly SlaService _service;
 
@@ -163,7 +163,7 @@ public sealed class SlaServiceTests
         await _service.AttachClocksAsync(incident);
         incident.Status = IncidentStatus.Pending;
 
-        await _service.OnStatusChangedAsync(incident, IncidentStatus.InProgress);
+        await _service.OnStatusChangedAsync(incident, IncidentSlaMapping.For(incident, IncidentStatus.InProgress));
 
         var response = incident.SlaInstances.Single(i => i.TargetType == SlaTargetType.Response);
         var resolution = incident.SlaInstances.Single(i => i.TargetType == SlaTargetType.Resolution);
@@ -185,7 +185,7 @@ public sealed class SlaServiceTests
         await _service.AttachClocksAsync(incident);
         incident.Status = IncidentStatus.Pending;
 
-        await _service.OnStatusChangedAsync(incident, IncidentStatus.InProgress);
+        await _service.OnStatusChangedAsync(incident, IncidentSlaMapping.For(incident, IncidentStatus.InProgress));
 
         incident.SlaInstances.Single().State.ShouldBe(SlaState.InProgress);
     }
@@ -200,12 +200,12 @@ public sealed class SlaServiceTests
         var originalDue = incident.SlaInstances.Single().DueAt;
 
         incident.Status = IncidentStatus.Pending;
-        await _service.OnStatusChangedAsync(incident, IncidentStatus.InProgress);
+        await _service.OnStatusChangedAsync(incident, IncidentSlaMapping.For(incident, IncidentStatus.InProgress));
 
         // Two hours pass while the desk waits on the requester.
         _clock.UtcNow.Returns(Now.AddMinutes(120));
         incident.Status = IncidentStatus.InProgress;
-        await _service.OnStatusChangedAsync(incident, IncidentStatus.Pending);
+        await _service.OnStatusChangedAsync(incident, IncidentSlaMapping.For(incident, IncidentStatus.Pending));
 
         var clock = incident.SlaInstances.Single();
         clock.State.ShouldBe(SlaState.InProgress);
@@ -222,7 +222,7 @@ public sealed class SlaServiceTests
 
         incident.Status = IncidentStatus.Resolved;
         incident.ResolvedAt = Now.AddMinutes(120);
-        await _service.OnStatusChangedAsync(incident, IncidentStatus.InProgress);
+        await _service.OnStatusChangedAsync(incident, IncidentSlaMapping.For(incident, IncidentStatus.InProgress));
 
         var clock = incident.SlaInstances.Single();
         clock.State.ShouldBe(SlaState.Met);
@@ -239,7 +239,7 @@ public sealed class SlaServiceTests
 
         incident.Status = IncidentStatus.Resolved;
         incident.ResolvedAt = Now.AddMinutes(600);
-        await _service.OnStatusChangedAsync(incident, IncidentStatus.InProgress);
+        await _service.OnStatusChangedAsync(incident, IncidentSlaMapping.For(incident, IncidentStatus.InProgress));
 
         incident.SlaInstances.Single().State.ShouldBe(SlaState.Breached);
         incident.HasBreachedSla.ShouldBeTrue();
@@ -254,7 +254,7 @@ public sealed class SlaServiceTests
         await _service.AttachClocksAsync(incident);
 
         incident.Status = IncidentStatus.Cancelled;
-        await _service.OnStatusChangedAsync(incident, IncidentStatus.InProgress);
+        await _service.OnStatusChangedAsync(incident, IncidentSlaMapping.For(incident, IncidentStatus.InProgress));
 
         incident.SlaInstances.Single().State.ShouldBe(SlaState.Cancelled);
         incident.NextSlaDueAt.ShouldBeNull();
@@ -271,7 +271,7 @@ public sealed class SlaServiceTests
         await _service.AttachClocksAsync(incident);
 
         incident.RecordFirstResponse(Now.AddMinutes(12));
-        await _service.OnFirstResponseAsync(incident);
+        await _service.OnFirstResponseAsync(incident, incident.FirstRespondedAt!.Value);
 
         incident.SlaInstances.Single(i => i.TargetType == SlaTargetType.Response)
             .State.ShouldBe(SlaState.Met);
@@ -344,7 +344,7 @@ public sealed class SlaServiceTests
 
         await _service.AttachClocksAsync(incident);
         incident.RecordFirstResponse(Now.AddMinutes(10));
-        await _service.OnFirstResponseAsync(incident);
+        await _service.OnFirstResponseAsync(incident, incident.FirstRespondedAt!.Value);
 
         incident.Priority = Priority.P1Critical;
         await _service.OnPriorityChangedAsync(incident);
@@ -368,7 +368,7 @@ public sealed class SlaServiceTests
         incident.NextSlaDueAt.ShouldBe(Now.AddMinutes(30));
 
         incident.RecordFirstResponse(Now.AddMinutes(10));
-        await _service.OnFirstResponseAsync(incident);
+        await _service.OnFirstResponseAsync(incident, incident.FirstRespondedAt!.Value);
 
         // Once the response clock settles, the resolution deadline becomes the one to watch.
         incident.NextSlaDueAt.ShouldBe(Now.AddMinutes(480));

@@ -113,7 +113,7 @@ public static class DependencyInjection
 
         services.AddScoped<IncidentRepository>();
         services.AddScoped<IIncidentRepository>(p => p.GetRequiredService<IncidentRepository>());
-        services.AddScoped<IIncidentSlaWriter>(p => p.GetRequiredService<IncidentRepository>());
+        services.AddScoped<ISlaInstanceWriter, SlaInstanceWriter>();
 
         services.AddScoped<SlaRepository>();
         services.AddScoped<ISlaRepository>(p => p.GetRequiredService<SlaRepository>());

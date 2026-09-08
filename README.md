@@ -22,9 +22,9 @@ below is implemented, tested, and runs.
 | Append-only audit trail | Built |
 | Incident management, full lifecycle | Built, 23 integration tests |
 | Service catalogue with server-validated fields | Built |
-| Service requests, full lifecycle | Built, 18 integration tests |
+| Service requests, full lifecycle | Built, 21 integration tests |
 | Approvals, module-agnostic | Built, 8 isolation tests |
-| SLA engine with Indian business calendars | Built, 32 tests |
+| SLA engine with Indian business calendars, incidents and requests | Built, 32 tests |
 | Notifications (in-app + email dispatch) | Built |
 | Service desk dashboard, incident queue, record pages | Built |
 | AI abstraction, tool registry, grounded assistant | Built, 9 security tests |
@@ -35,10 +35,6 @@ below is implemented, tested, and runs.
 Modules that ship in later phases — problems, changes, knowledge, CMDB, assets, the workflow
 engine, reporting and settings — appear in the navigation marked **"Later"** and are deliberately
 not clickable. Nothing in this product pretends to work.
-
-> **Requests do not yet carry an SLA clock.** The schema and the `SlaInstance` table support it,
-> but `ISlaService` is still typed against `Incident`, so no clock is attached rather than
-> showing figures no clock produced. See [STATUS.md](docs/STATUS.md).
 
 **[See the full status report, including known limitations →](docs/STATUS.md)**
 
@@ -132,7 +128,7 @@ src/
 tests/
   NexaOps.Domain.Tests/         189 tests. Pure domain rules.
   NexaOps.Application.Tests/    31 tests. Use-case orchestration and the permission catalogue.
-  NexaOps.Api.IntegrationTests/ 102 tests. Real HTTP against real SQL Server.
+  NexaOps.Api.IntegrationTests/ 105 tests. Real HTTP against real SQL Server.
 infra/
   bicep/                   Azure infrastructure, four environments.
   scripts/                 Local development helpers.
@@ -167,7 +163,7 @@ Every one of these passes on the current tree:
 
 ```bash
 dotnet build NexaOps.slnx -warnaserror   # 0 warnings, 0 errors
-dotnet test NexaOps.slnx                 # 322 tests
+dotnet test NexaOps.slnx                 # 325 tests
 cd src/NexaOps.Web && npm run typecheck   # clean
 cd src/NexaOps.Web && npm run lint        # clean
 cd src/NexaOps.Web && npm run test        # 38 tests

@@ -8,6 +8,7 @@ using NexaOps.Domain.Auditing;
 using NexaOps.Domain.Common;
 using NexaOps.Domain.Platform;
 using NexaOps.Domain.ServiceDesk;
+using NexaOps.Domain.Sla;
 
 namespace NexaOps.Application.Incidents;
 
@@ -440,7 +441,13 @@ public sealed class IncidentService : IIncidentService
 
         incident.TransitionTo(command.Status, _currentUser.UserId, _clock.UtcNow);
 
-        await _sla.OnStatusChangedAsync(incident, previousStatus, cancellationToken).ConfigureAwait(false);
+        // The incident lifecycle is translated into the engine's own vocabulary here, so the SLA
+        // rules stay identical across modules while each module keeps its own statuses.
+        await _sla.OnStatusChangedAsync(
+                incident,
+                IncidentSlaMapping.For(incident, previousStatus),
+                cancellationToken)
+            .ConfigureAwait(false);
 
         if (!string.IsNullOrWhiteSpace(command.Notes) && command.Status != IncidentStatus.Resolved)
         {
@@ -612,7 +619,7 @@ public sealed class IncidentService : IIncidentService
             && _currentUser.UserId != incident.RequesterId)
         {
             incident.RecordFirstResponse(now);
-            await _sla.OnFirstResponseAsync(incident, cancellationToken).ConfigureAwait(false);
+            await _sla.OnFirstResponseAsync(incident, now, cancellationToken).ConfigureAwait(false);
         }
 
         _audit.Record(

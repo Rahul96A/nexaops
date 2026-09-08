@@ -353,6 +353,20 @@ public sealed class TenantProvisioningService
                 resolutionMinutes, calendarId));
         }
 
+        // Requests get a fulfilment commitment only. There is no response target: a request is
+        // planned work with no "someone is silent while something is broken" problem to measure,
+        // and the clock is paused for the whole time it waits on an approver anyway.
+        //
+        // The targets are working days rather than hours, because that is how delivery is
+        // actually promised to the business.
+        foreach (var (priority, fulfilmentMinutes) in RequestFulfilmentTargets)
+        {
+            definitions.Add(EnsureDefinition(
+                tenantId, existingCodes, $"REQ-{priority}-FULFILMENT",
+                $"{Describe(priority)} fulfilment", SlaTargetType.Resolution,
+                fulfilmentMinutes, calendars.BusinessId, ServiceModule.Request));
+        }
+
         await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         var allDefinitions = await _context.SlaDefinitions
@@ -396,7 +410,45 @@ public sealed class TenantProvisioningService
                 order += 10;
             }
         }
+
+        foreach (var (priority, _) in RequestFulfilmentTargets)
+        {
+            var definition = allDefinitions.FirstOrDefault(d => d.Code == $"REQ-{priority}-FULFILMENT");
+
+            if (definition is null
+                || existingPolicies.Any(p => p.SlaDefinitionId == definition.Id && p.Priority == priority))
+            {
+                continue;
+            }
+
+            _context.SlaPolicies.Add(new SlaPolicy
+            {
+                TenantId = tenantId,
+                Name = definition.Name,
+                SlaDefinitionId = definition.Id,
+                Module = ServiceModule.Request,
+                Priority = priority,
+                Order = order,
+                IsActive = true,
+                CreatedAt = _clock.UtcNow
+            });
+
+            order += 10;
+        }
     }
+
+    /// <summary>
+    /// Fulfilment targets in business minutes: one, two, three, five and ten working days at
+    /// nine hours a day. Requests are promised in days, not hours.
+    /// </summary>
+    private static readonly (Priority Priority, int FulfilmentMinutes)[] RequestFulfilmentTargets =
+    [
+        (Priority.P1Critical, 540),
+        (Priority.P2High, 1080),
+        (Priority.P3Moderate, 1620),
+        (Priority.P4Low, 2700),
+        (Priority.P5Planning, 5400)
+    ];
 
     private SlaDefinition EnsureDefinition(
         Guid tenantId,
@@ -405,14 +457,15 @@ public sealed class TenantProvisioningService
         string name,
         SlaTargetType targetType,
         int durationMinutes,
-        Guid calendarId)
+        Guid calendarId,
+        ServiceModule module = ServiceModule.Incident)
     {
         var definition = new SlaDefinition
         {
             TenantId = tenantId,
             Code = code,
             Name = name,
-            Module = ServiceModule.Incident,
+            Module = module,
             TargetType = targetType,
             DurationMinutes = durationMinutes,
             BusinessCalendarId = calendarId,

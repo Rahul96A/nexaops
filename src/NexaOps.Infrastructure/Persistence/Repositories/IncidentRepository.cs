@@ -9,7 +9,7 @@ using NexaOps.Domain.Sla;
 namespace NexaOps.Infrastructure.Persistence.Repositories;
 
 /// <inheritdoc cref="IIncidentRepository" />
-public sealed class IncidentRepository : IIncidentRepository, IIncidentSlaWriter
+public sealed class IncidentRepository : IIncidentRepository
 {
     private readonly NexaOpsDbContext _context;
 
@@ -68,9 +68,6 @@ public sealed class IncidentRepository : IIncidentRepository, IIncidentSlaWriter
 
     /// <inheritdoc />
     public void RemoveTags(IEnumerable<IncidentTag> tags) => _context.IncidentTags.RemoveRange(tags);
-
-    /// <inheritdoc />
-    public void AddSlaInstance(SlaInstance instance) => _context.SlaInstances.Add(instance);
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<SlaInstance>> GetClocksNeedingAttentionAsync(

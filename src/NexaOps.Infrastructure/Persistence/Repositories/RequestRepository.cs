@@ -3,6 +3,9 @@ using NexaOps.Application.Requests;
 using NexaOps.Domain.Approvals;
 using NexaOps.Domain.Catalog;
 using NexaOps.Domain.Requests;
+using NexaOps.Domain.ServiceDesk;
+using NexaOps.Application.Sla;
+using NexaOps.Domain.Sla;
 
 namespace NexaOps.Infrastructure.Persistence.Repositories;
 
@@ -21,10 +24,55 @@ public sealed class RequestRepository : IRequestRepository
 
     /// <inheritdoc />
     public async Task<ServiceRequest?> GetWithLinesAsync(Guid id, CancellationToken cancellationToken = default)
-        => await _context.ServiceRequests
+    {
+        var request = await _context.ServiceRequests
             .Include(r => r.Items)
             .FirstOrDefaultAsync(r => r.Id == id, cancellationToken)
             .ConfigureAwait(false);
+
+        if (request is null)
+        {
+            return null;
+        }
+
+        await LoadClocksAsync(request, cancellationToken).ConfigureAwait(false);
+        return request;
+    }
+
+    /// <inheritdoc />
+    public async Task<ServiceRequest?> GetWithClocksAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var request = await _context.ServiceRequests
+            .FirstOrDefaultAsync(r => r.Id == id, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (request is null)
+        {
+            return null;
+        }
+
+        await LoadClocksAsync(request, cancellationToken).ConfigureAwait(false);
+        return request;
+    }
+
+    /// <summary>
+    /// Clocks are addressed by module and record id, never through a navigation - mapping one
+    /// creates a foreign key that contradicts the table's polymorphism.
+    /// </summary>
+    private async Task LoadClocksAsync(ServiceRequest request, CancellationToken cancellationToken)
+    {
+        var clocks = await _context.SlaInstances
+            .Include(s => s.SlaDefinition)
+            .Where(s => s.Module == ServiceModule.Request && s.RecordId == request.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        request.SlaInstances.Clear();
+        foreach (var clock in clocks)
+        {
+            request.SlaInstances.Add(clock);
+        }
+    }
 
     /// <inheritdoc />
     public async Task<ServiceRequest?> GetByNumberAsync(string number, CancellationToken cancellationToken = default)
@@ -176,4 +224,22 @@ public sealed class ApprovalRepository : IApprovalRepository
 
     /// <inheritdoc />
     public void Add(Approval approval) => _context.Approvals.Add(approval);
+}
+
+/// <summary>
+/// Persists SLA clocks for every module.
+/// <para>
+/// Deliberately not one of the module repositories. Both the incident and request repositories
+/// could satisfy this port, and a single registration would silently pick one - which reads as
+/// if incidents own the SLA table. They do not: it is addressed by module and record id.
+/// </para>
+/// </summary>
+public sealed class SlaInstanceWriter : ISlaInstanceWriter
+{
+    private readonly NexaOpsDbContext _context;
+
+    public SlaInstanceWriter(NexaOpsDbContext context) => _context = context;
+
+    /// <inheritdoc />
+    public void AddSlaInstance(SlaInstance instance) => _context.SlaInstances.Add(instance);
 }
