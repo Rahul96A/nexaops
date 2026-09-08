@@ -38,7 +38,19 @@ public static class SystemRoles
         Permissions.IncidentAttachmentRead,
         Permissions.IncidentAttachmentUpload,
         Permissions.CategoryRead,
-        Permissions.UserRead
+        Permissions.UserRead,
+
+        // Every employee can browse the catalogue and raise and track their own requests.
+        Permissions.CatalogRead,
+        Permissions.RequestRead,
+        Permissions.RequestCreate,
+        Permissions.RequestCommentCreate,
+
+        // Granted to everyone because approval is scoped by the approval record itself, not by
+        // this permission: holding it lets a user act on approvals addressed to them and on
+        // nothing else. Line-manager approval means any employee may be an approver, so gating
+        // it behind a role would strand requests whenever a manager lacked that role.
+        Permissions.ApprovalAct
     ];
 
     private static readonly string[] AgentPermissions =
@@ -59,7 +71,16 @@ public static class SystemRoles
         Permissions.CalendarRead,
         Permissions.ReportView,
         Permissions.AiAssistantUse,
-        Permissions.AiActionConfirm
+        Permissions.AiActionConfirm,
+
+        // Request fulfilment is agent work, exactly as incident resolution is.
+        Permissions.RequestReadAll,
+        Permissions.RequestUpdate,
+        Permissions.RequestAssign,
+        Permissions.RequestFulfil,
+        Permissions.RequestClose,
+        Permissions.RequestWorkNoteRead,
+        Permissions.RequestWorkNoteCreate
     ];
 
     private static readonly string[] ServiceDeskManagerPermissions =
@@ -75,7 +96,13 @@ public static class SystemRoles
         Permissions.CategoryManage,
         Permissions.SlaManage,
         Permissions.CalendarManage,
-        Permissions.AuditRead
+        Permissions.AuditRead,
+
+        // Cancelling somebody else's request, editing the catalogue and seeing the whole
+        // approval backlog are management acts, not agent acts.
+        Permissions.RequestCancel,
+        Permissions.CatalogManage,
+        Permissions.ApprovalReadAll
     ];
 
     /// <summary>The seed definition of one role.</summary>
@@ -136,12 +163,15 @@ public static class SystemRoles
                 Permissions.ReportView,
                 Permissions.ReportExport,
                 Permissions.AuditRead,
-                Permissions.AiAssistantUse
+                Permissions.AiAssistantUse,
+                Permissions.RequestReadAll,
+                Permissions.RequestWorkNoteRead,
+                Permissions.ApprovalReadAll
             ]),
 
         new(ChangeManager,
             "Change Manager",
-            "Owns the change process. Change management ships in a later phase; today this role carries service desk read access and reporting.",
+            "Owns the change process. Change management ships in a later phase; today this role carries service desk and request read access, approval oversight, and reporting.",
             [
                 .. BaselinePermissions,
                 Permissions.IncidentReadAll,
@@ -149,14 +179,19 @@ public static class SystemRoles
                 Permissions.GroupRead,
                 Permissions.SlaRead,
                 Permissions.ReportView,
-                Permissions.AiAssistantUse
+                Permissions.AiAssistantUse,
+                Permissions.RequestReadAll,
+                Permissions.RequestWorkNoteRead,
+                Permissions.ApprovalReadAll
             ]),
 
         new(Approver,
             "Approver",
-            "Approves requests and changes routed to them. Approval workflows ship with request management.",
+            "Authorises service requests routed to them, and can see the requests they are deciding on in full context.",
             [
                 .. BaselinePermissions,
+                Permissions.RequestReadAll,
+                Permissions.RequestWorkNoteRead,
                 Permissions.ReportView
             ]),
 

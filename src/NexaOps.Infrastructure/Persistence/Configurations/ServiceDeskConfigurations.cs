@@ -114,13 +114,15 @@ public sealed class IncidentConfiguration : IEntityTypeConfiguration<Incident>
             .HasForeignKey(t => t.IncidentId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // SLA instances are polymorphic across modules, so the relationship is configured from
-        // the incident side only, keyed on RecordId with a module discriminator in the query.
-        builder.HasMany(x => x.SlaInstances)
-            .WithOne()
-            .HasForeignKey(s => s.RecordId)
-            .HasPrincipalKey(i => i.Id)
-            .OnDelete(DeleteBehavior.Cascade);
+        // SLA instances are polymorphic across modules: they are addressed by Module + RecordId,
+        // and IncidentRepository loads them explicitly with that discriminator.
+        //
+        // The collection is therefore deliberately NOT mapped. Mapping it created a real
+        // FK_SlaInstances_Incidents_RecordId constraint, which contradicted the polymorphism it
+        // was commented as supporting - a clock belonging to any other module would have failed
+        // to insert against a foreign key pointing at Incidents. The navigation stays on the
+        // entity and is populated by the repository; EF simply does not own it.
+        builder.Ignore(x => x.SlaInstances);
 
         // --- Indexes chosen from the queries the product actually runs. ---
 

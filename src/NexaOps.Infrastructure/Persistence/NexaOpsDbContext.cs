@@ -1,9 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using NexaOps.Application.Abstractions;
+using NexaOps.Domain.Approvals;
 using NexaOps.Domain.Auditing;
+using NexaOps.Domain.Catalog;
 using NexaOps.Domain.Common;
 using NexaOps.Domain.Identity;
 using NexaOps.Domain.Platform;
+using NexaOps.Domain.Requests;
 using NexaOps.Domain.ServiceDesk;
 using NexaOps.Domain.Sla;
 
@@ -184,6 +187,14 @@ public class NexaOpsDbContext : DbContext
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<NumberSequence> NumberSequences => Set<NumberSequence>();
     public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
+
+    // --- Service catalogue, requests and approvals ---
+    public DbSet<CatalogItem> CatalogItems => Set<CatalogItem>();
+    public DbSet<CatalogItemVariable> CatalogItemVariables => Set<CatalogItemVariable>();
+    public DbSet<ServiceRequest> ServiceRequests => Set<ServiceRequest>();
+    public DbSet<RequestItem> RequestItems => Set<RequestItem>();
+    public DbSet<RequestComment> RequestComments => Set<RequestComment>();
+    public DbSet<Approval> Approvals => Set<Approval>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

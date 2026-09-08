@@ -102,6 +102,57 @@ public static class Permissions
     public const string IncidentArchive = "incident.archive";
 
     // ---------------------------------------------------------------
+    // Service catalogue
+    // ---------------------------------------------------------------
+
+    /// <summary>Browse the catalogue and order from it. Every authenticated user holds this.</summary>
+    public const string CatalogRead = "catalog.read";
+
+    /// <summary>Create, edit, publish and retire catalogue items and their fields.</summary>
+    public const string CatalogManage = "catalog.manage";
+
+    // ---------------------------------------------------------------
+    // Service request
+    // ---------------------------------------------------------------
+
+    /// <summary>
+    /// Read requests the caller is involved in - raised, requested for, assigned, or in one of
+    /// their fulfilment groups. Every authenticated user holds this.
+    /// </summary>
+    public const string RequestRead = "request.read";
+
+    /// <summary>Read every request in the tenant. Fulfilment-agent level and above.</summary>
+    public const string RequestReadAll = "request.read.all";
+
+    public const string RequestCreate = "request.create";
+    public const string RequestUpdate = "request.update";
+    public const string RequestAssign = "request.assign";
+
+    /// <summary>Mark request lines delivered and complete a request.</summary>
+    public const string RequestFulfil = "request.fulfil";
+
+    public const string RequestClose = "request.close";
+    public const string RequestCancel = "request.cancel";
+    public const string RequestCommentCreate = "request.comment.create";
+
+    /// <summary>See internal work notes on requests. Requesters never hold this.</summary>
+    public const string RequestWorkNoteRead = "request.worknote.read";
+    public const string RequestWorkNoteCreate = "request.worknote.create";
+
+    // ---------------------------------------------------------------
+    // Approval
+    // ---------------------------------------------------------------
+
+    /// <summary>
+    /// Act on approvals addressed to the caller. Holding this does not let anyone approve
+    /// somebody else's approval - the record itself decides who may decide it.
+    /// </summary>
+    public const string ApprovalAct = "approval.act";
+
+    /// <summary>See every approval in the tenant, not only one's own. A management view.</summary>
+    public const string ApprovalReadAll = "approval.read.all";
+
+    // ---------------------------------------------------------------
     // Reporting
     // ---------------------------------------------------------------
 
@@ -172,6 +223,24 @@ public static class Permissions
         new(IncidentAttachmentUpload, "Incident", "Upload attachments", "Attach files to incidents."),
         new(IncidentExport, "Incident", "Export incidents", "Export incident lists to file."),
         new(IncidentArchive, "Incident", "Archive incidents", "Archive an incident record."),
+
+        new(CatalogRead, "Catalogue", "Browse the catalogue", "View catalogue items and order from them."),
+        new(CatalogManage, "Catalogue", "Manage the catalogue", "Create, edit, publish and retire catalogue items."),
+
+        new(RequestRead, "Request", "View own requests", "Read requests the user raised, is the subject of, or is assigned."),
+        new(RequestReadAll, "Request", "View all requests", "Read every service request in the tenant."),
+        new(RequestCreate, "Request", "Raise requests", "Submit new service requests."),
+        new(RequestUpdate, "Request", "Edit requests", "Change request fields and classification."),
+        new(RequestAssign, "Request", "Assign requests", "Set the fulfilment group and assignee."),
+        new(RequestFulfil, "Request", "Fulfil requests", "Mark request lines delivered and complete a request."),
+        new(RequestClose, "Request", "Close requests", "Close a fulfilled request."),
+        new(RequestCancel, "Request", "Cancel requests", "Cancel a request raised in error or no longer needed."),
+        new(RequestCommentCreate, "Request", "Add comments", "Add requester-visible comments."),
+        new(RequestWorkNoteRead, "Request", "View work notes", "Read internal work notes on requests."),
+        new(RequestWorkNoteCreate, "Request", "Add work notes", "Add internal work notes on requests."),
+
+        new(ApprovalAct, "Approval", "Act on approvals", "Approve or reject approvals addressed to the user."),
+        new(ApprovalReadAll, "Approval", "View all approvals", "Read every approval in the tenant."),
 
         new(ReportView, "Reporting", "View reports", "Open dashboards and reports."),
         new(ReportExport, "Reporting", "Export reports", "Export report output to file."),
