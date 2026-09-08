@@ -151,11 +151,17 @@ public sealed class TestEnvironment : IAsyncLifetime
         var employee = CreateUser(context, hasher, tenant.Id, organization.Id, department.Id,
             "employee", "Aditya", "Menon", domain);
 
+        // Asset and licence administration is deliberately not held by the service desk manager,
+        // so the fixture needs somebody who does hold it.
+        var assetManager = CreateUser(context, hasher, tenant.Id, organization.Id, department.Id,
+            "assetmanager", "Vikram", "Iyer", domain);
+
         await context.SaveChangesAsync();
 
         Assign(context, tenant.Id, manager.Id, roles[SystemRoles.ServiceDeskManager].Id);
         Assign(context, tenant.Id, agent.Id, roles[SystemRoles.ServiceDeskAgent].Id);
         Assign(context, tenant.Id, employee.Id, roles[SystemRoles.Requester].Id);
+        Assign(context, tenant.Id, assetManager.Id, roles[SystemRoles.AssetManager].Id);
 
         foreach (var (userId, isLead) in new[] { (manager.Id, true), (agent.Id, false) })
         {
@@ -182,7 +188,8 @@ public sealed class TestEnvironment : IAsyncLifetime
             subcategory.Id,
             new TestUser(manager.Id, manager.Email, "Priya Raghavan"),
             new TestUser(agent.Id, agent.Email, "Kavya Nair"),
-            new TestUser(employee.Id, employee.Email, "Aditya Menon"));
+            new TestUser(employee.Id, employee.Email, "Aditya Menon"),
+            new TestUser(assetManager.Id, assetManager.Email, "Vikram Iyer"));
     }
 
     private static User CreateUser(
@@ -284,6 +291,7 @@ public sealed class TestEnvironment : IAsyncLifetime
 /// <param name="Manager">Service desk manager.</param>
 /// <param name="Agent">Service desk agent.</param>
 /// <param name="Employee">An ordinary employee with the requester role only.</param>
+/// <param name="AssetManager">Holds asset and licence administration.</param>
 public sealed record TenantFixture(
     Guid TenantId,
     string Code,
@@ -295,7 +303,10 @@ public sealed record TenantFixture(
     Guid SubcategoryId,
     TestUser Manager,
     TestUser Agent,
-    TestUser Employee);
+    TestUser Employee,
+
+    /// <summary>Holds asset and licence administration, which the service desk manager does not.</summary>
+    TestUser AssetManager);
 
 /// <param name="Id">User identifier.</param>
 /// <param name="Email">Sign-in address.</param>

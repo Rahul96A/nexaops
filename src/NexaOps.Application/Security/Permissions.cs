@@ -275,6 +275,29 @@ public static class Permissions
     public const string CmdbRetire = "cmdb.retire";
 
     // ---------------------------------------------------------------
+    // Asset
+    // ---------------------------------------------------------------
+
+    /// <summary>Read the asset register and licence position.</summary>
+    public const string AssetRead = "asset.read";
+
+    public const string AssetCreate = "asset.create";
+    public const string AssetUpdate = "asset.update";
+
+    /// <summary>Issue an asset to somebody and take it back. The custody trail.</summary>
+    public const string AssetAssign = "asset.assign";
+
+    /// <summary>
+    /// Dispose of or write off an asset. Narrowly held: it removes something from the register
+    /// that a finance audit expects to be able to count.
+    /// </summary>
+    public const string AssetDispose = "asset.dispose";
+
+    /// <summary>Read and maintain software licence agreements and their deployment counts.</summary>
+    public const string LicenceRead = "licence.read";
+    public const string LicenceManage = "licence.manage";
+
+    // ---------------------------------------------------------------
     // Reporting
     // ---------------------------------------------------------------
 
@@ -403,6 +426,14 @@ public static class Permissions
         new(CmdbUpdate, "CMDB", "Edit configuration items", "Change item details, ownership and criticality."),
         new(CmdbManageRelationships, "CMDB", "Manage dependencies", "Add and remove dependency relationships."),
         new(CmdbRetire, "CMDB", "Retire configuration items", "Retire or dispose of a configuration item."),
+
+        new(AssetRead, "Asset", "View assets", "Read the asset register and custody history."),
+        new(AssetCreate, "Asset", "Add assets", "Add assets to the register."),
+        new(AssetUpdate, "Asset", "Edit assets", "Change asset details and location."),
+        new(AssetAssign, "Asset", "Issue and return assets", "Issue an asset to somebody and take it back."),
+        new(AssetDispose, "Asset", "Dispose of assets", "Dispose of or write off an asset."),
+        new(LicenceRead, "Asset", "View licences", "Read software licence agreements and compliance."),
+        new(LicenceManage, "Asset", "Manage licences", "Maintain licence agreements and deployment counts."),
 
         new(ReportView, "Reporting", "View reports", "Open dashboards and reports."),
         new(ReportExport, "Reporting", "Export reports", "Export report output to file."),

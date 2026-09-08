@@ -2,8 +2,8 @@
 
 **As of 8 September 2026.** Phase 1 (platform foundation), Incident Management, Phase 2
 (Service Requests, Service Catalogue and Approvals) Phase 3 (Problem Management), Phase 4
-(Change Management and the CAB) Phase 5 (Knowledge Base) and Phase 6 (CMDB),
-plus a demo environment.
+(Change Management and the CAB) Phase 5 (Knowledge Base), Phase 6 (CMDB) and
+Phase 7 (Asset Management), plus a demo environment.
 
 This document is written to be handed to someone who has to decide whether to rely on this. It
 lists what works, what does not, and what is deliberately absent — with the gaps in the same
@@ -16,7 +16,7 @@ detail as the achievements.
 | Gate | Result |
 |---|---|
 | `dotnet build NexaOps.slnx -warnaserror` | **0 warnings, 0 errors** |
-| `dotnet test NexaOps.slnx` | **469 passing** |
+| `dotnet test NexaOps.slnx` | **512 passing** |
 | `npm run typecheck` | Clean |
 | `npm run lint` | Clean |
 | `npm run test` | **38 passing** |
@@ -26,7 +26,7 @@ detail as the achievements.
 | `npm audit` | No advisories |
 | gitleaks (full history) | No secrets |
 
-507 tests total (282 domain, 31 application, 156 integration, 38 front end). Breakdown and
+550 tests total (308 domain, 31 application, 173 integration, 38 front end). Breakdown and
 strategy in [TESTING.md](TESTING.md).
 
 > Two of these gates were previously reported as passing when they were not. `dotnet build`
@@ -76,6 +76,29 @@ strategy in [TESTING.md](TESTING.md).
   abandons its clock rather than breaching it. Targets are working days — one, two, three, five
   and ten — because that is how delivery is actually promised.
 - A requester may withdraw their own request without holding `request.cancel`.
+
+### Asset Management — complete (API and tests; no UI yet)
+
+- **Custody is history, not a field.** "Who had this laptop in March" is what an audit or a
+  security incident actually asks, and a single mutable holder cannot answer it. Issuing,
+  returning and disposing all close the open custody record.
+- **Disposal closes custody first**, so nobody stays apparently accountable for a thing that no
+  longer exists — and it has its own action rather than being reachable through a general edit,
+  which would skip both that and the disposal date.
+- **A refresh date is absent rather than guessed.** One invented from a missing purchase date
+  would be worse than none, because somebody would budget against it.
+- **Licence compliance is computed, not stored.** A register that can disagree with itself
+  answers nothing. Expiry beats everything: every deployment against a lapsed agreement is
+  unlicensed however comfortable the seat count looks. Usage at 80% or more reads as compliant
+  rather than under-used, so nobody cancels seats they are about to need.
+- Disposal and licence administration sit with the asset manager, not the service desk manager:
+  disposal removes something a finance audit expects to be able to count.
+- Assets and configuration items are **linked, not merged**. A CI answers what a thing supports;
+  an asset answers who has it and what it cost. Merging produces a record that serves neither.
+
+**Not built:** an asset user interface, and any automatic discovery of software installations.
+`DeployedCount` is maintained by whoever knows — an inventory feed or a person. NexaOps does not
+discover installations itself, and the compliance position is only as good as that number.
 
 ### CMDB — complete (API and tests; no UI yet)
 
@@ -206,8 +229,8 @@ be demonstrated until some are created through the API.
 
 These appear in the navigation marked **"Later"** and are not clickable. Nothing pretends to work.
 
-Asset management, the visual workflow engine, reporting and dashboard builder, settings,
-virtual agent, mobile apps, inbound email, third-party integrations.
+The visual workflow engine, reporting and dashboard builder, settings, virtual agent, mobile
+apps, inbound email, third-party integrations.
 
 Problems and Changes have list and record pages; neither has a create form in the UI yet, so
 raising one goes through the API. Every other operation on them is available in the browser.
@@ -331,7 +354,7 @@ detail in [SECURITY.md §7](SECURITY.md) and [TESTING.md §9](TESTING.md).
 
 ## 7. Next implementation phase
 
-**Recommended: a CMDB user interface, then Asset Management.**
+**Recommended: user interfaces for CMDB and Assets, then the workflow engine.**
 
 Why this and not something else:
 

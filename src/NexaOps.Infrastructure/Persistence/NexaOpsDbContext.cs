@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NexaOps.Application.Abstractions;
 using NexaOps.Domain.Approvals;
+using NexaOps.Domain.Assets;
 using NexaOps.Domain.Auditing;
 using NexaOps.Domain.Catalog;
 using NexaOps.Domain.Changes;
@@ -215,6 +216,11 @@ public class NexaOpsDbContext : DbContext
     // --- Configuration management database ---
     public DbSet<ConfigurationItem> ConfigurationItems => Set<ConfigurationItem>();
     public DbSet<CiRelationship> CiRelationships => Set<CiRelationship>();
+
+    // --- Asset management ---
+    public DbSet<Asset> Assets => Set<Asset>();
+    public DbSet<AssetAssignment> AssetAssignments => Set<AssetAssignment>();
+    public DbSet<SoftwareLicence> SoftwareLicences => Set<SoftwareLicence>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

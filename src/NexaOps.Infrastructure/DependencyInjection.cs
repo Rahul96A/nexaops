@@ -13,6 +13,7 @@ using NexaOps.Application.Abstractions;
 using NexaOps.Application.Ai;
 using NexaOps.Application.Identity;
 using NexaOps.Application.Changes;
+using NexaOps.Application.Assets;
 using NexaOps.Application.Cmdb;
 using NexaOps.Application.Incidents;
 using NexaOps.Application.Knowledge;
@@ -144,6 +145,10 @@ public static class DependencyInjection
         // CMDB.
         services.AddScoped<ICmdbRepository, CmdbRepository>();
         services.AddScoped<ICmdbQueryService, CmdbQueryService>();
+
+        // Asset management.
+        services.AddScoped<IAssetRepository, AssetRepository>();
+        services.AddScoped<IAssetQueryService, AssetQueryService>();
 
         services.AddScoped<IIncidentQueryService, IncidentQueryService>();
         services.AddScoped<IServiceDeskReferenceRepository, ServiceDeskReferenceRepository>();

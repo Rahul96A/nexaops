@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NexaOps.Application.Ai;
 using NexaOps.Application.Ai.Tools;
 using NexaOps.Application.Changes;
+using NexaOps.Application.Assets;
 using NexaOps.Application.Cmdb;
 using NexaOps.Application.Incidents;
 using NexaOps.Application.Knowledge;
@@ -38,6 +39,9 @@ public static class DependencyInjection
 
         // CMDB.
         services.AddScoped<ICmdbService, CmdbService>();
+
+        // Asset management.
+        services.AddScoped<IAssetService, AssetService>();
         services.AddScoped<ISlaService, SlaService>();
 
         // Validators are discovered by assembly scan so a new command validator is picked up

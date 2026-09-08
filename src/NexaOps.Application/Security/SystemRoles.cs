@@ -109,7 +109,10 @@ public static class SystemRoles
         Permissions.KnowledgeCreate,
         Permissions.KnowledgeUpdate,
 
-        Permissions.CmdbRead
+        Permissions.CmdbRead,
+
+        // An agent fielding "my laptop is broken" needs to see what the caller actually holds.
+        Permissions.AssetRead
     ];
 
     private static readonly string[] ServiceDeskManagerPermissions =
@@ -154,7 +157,12 @@ public static class SystemRoles
 
         Permissions.CmdbCreate,
         Permissions.CmdbUpdate,
-        Permissions.CmdbManageRelationships
+        Permissions.CmdbManageRelationships,
+
+        Permissions.AssetCreate,
+        Permissions.AssetUpdate,
+        Permissions.AssetAssign,
+        Permissions.LicenceRead
     ];
 
     /// <summary>The seed definition of one role.</summary>
@@ -278,14 +286,22 @@ public static class SystemRoles
 
         new(AssetManager,
             "Asset Manager",
-            "Owns hardware and software assets. Asset management ships in a later phase; today this role carries CMDB read access and reporting.",
+            "Owns hardware and software assets: the register, custody, disposals, and the licence compliance position.",
             [
                 .. BaselinePermissions,
                 Permissions.IncidentReadAll,
                 Permissions.ReportView,
+                Permissions.ReportExport,
                 Permissions.OrganizationRead,
                 Permissions.DepartmentRead,
-                Permissions.CmdbRead
+                Permissions.CmdbRead,
+                Permissions.AssetRead,
+                Permissions.AssetCreate,
+                Permissions.AssetUpdate,
+                Permissions.AssetAssign,
+                Permissions.AssetDispose,
+                Permissions.LicenceRead,
+                Permissions.LicenceManage
             ]),
 
         new(CmdbAdministrator,

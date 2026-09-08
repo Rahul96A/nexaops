@@ -27,6 +27,7 @@ below is implemented, tested, and runs.
 | Change management, CAB, PIR | Built, 14 integration tests |
 | Knowledge base, review lifecycle | Built, 13 integration tests |
 | CMDB with impact analysis | Built (API only), 12 integration tests |
+| Asset register, custody, licence compliance | Built (API only), 17 integration tests |
 | Approvals, module-agnostic | Built, 8 isolation tests |
 | SLA engine with Indian business calendars, incidents and requests | Built, 32 tests |
 | Notifications (in-app + email dispatch) | Built |
@@ -36,7 +37,7 @@ below is implemented, tested, and runs.
 | CI/CD pipelines | Built |
 | Demo environment, 420 incidents across 2 tenants | Built |
 
-Modules that ship in later phases — CMDB, assets, the workflow
+Modules that ship in later phases — the workflow
 engine, reporting and settings — appear in the navigation marked **"Later"** and are deliberately
 not clickable. Nothing in this product pretends to work.
 
@@ -130,9 +131,9 @@ src/
   NexaOps.Api/             HTTP surface, auth wiring, middleware, workers, seeding.
   NexaOps.Web/             React 19 + TypeScript + Vite + MUI front end.
 tests/
-  NexaOps.Domain.Tests/         282 tests. Pure domain rules.
+  NexaOps.Domain.Tests/         308 tests. Pure domain rules.
   NexaOps.Application.Tests/    31 tests. Use-case orchestration and the permission catalogue.
-  NexaOps.Api.IntegrationTests/ 156 tests. Real HTTP against real SQL Server.
+  NexaOps.Api.IntegrationTests/ 173 tests. Real HTTP against real SQL Server.
 infra/
   bicep/                   Azure infrastructure, four environments.
   scripts/                 Local development helpers.
@@ -167,7 +168,7 @@ Every one of these passes on the current tree:
 
 ```bash
 dotnet build NexaOps.slnx -warnaserror   # 0 warnings, 0 errors
-dotnet test NexaOps.slnx                 # 469 tests
+dotnet test NexaOps.slnx                 # 512 tests
 cd src/NexaOps.Web && npm run typecheck   # clean
 cd src/NexaOps.Web && npm run lint        # clean
 cd src/NexaOps.Web && npm run test        # 38 tests

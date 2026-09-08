@@ -204,7 +204,7 @@ public sealed class TenantProvisioningService
 
         // Sequences for later modules are created now so their numbering starts at 1 whenever
         // those modules ship, rather than being invented mid-life.
-        foreach (var key in new[] { "INC", "REQ", "CHG", "PRB", "TASK", "KB", "ASSET", "CI" })
+        foreach (var key in new[] { "INC", "REQ", "CHG", "PRB", "TASK", "KB", "ASSET", "CI", "LIC" })
         {
             if (existing.Contains(key, StringComparer.Ordinal))
             {
