@@ -156,12 +156,19 @@ public sealed class TestEnvironment : IAsyncLifetime
         var assetManager = CreateUser(context, hasher, tenant.Id, organization.Id, department.Id,
             "assetmanager", "Vikram", "Iyer", domain);
 
+        // Directory, role and tenant configuration administration. Deliberately not the service
+        // desk manager: running a service desk and administering the tenant that owns it are
+        // different jobs, and the tests that check the split need somebody on each side of it.
+        var administrator = CreateUser(context, hasher, tenant.Id, organization.Id, department.Id,
+            "administrator", "Sunita", "Deshmukh", domain);
+
         await context.SaveChangesAsync();
 
         Assign(context, tenant.Id, manager.Id, roles[SystemRoles.ServiceDeskManager].Id);
         Assign(context, tenant.Id, agent.Id, roles[SystemRoles.ServiceDeskAgent].Id);
         Assign(context, tenant.Id, employee.Id, roles[SystemRoles.Requester].Id);
         Assign(context, tenant.Id, assetManager.Id, roles[SystemRoles.AssetManager].Id);
+        Assign(context, tenant.Id, administrator.Id, roles[SystemRoles.TenantAdministrator].Id);
 
         foreach (var (userId, isLead) in new[] { (manager.Id, true), (agent.Id, false) })
         {
@@ -189,7 +196,8 @@ public sealed class TestEnvironment : IAsyncLifetime
             new TestUser(manager.Id, manager.Email, "Priya Raghavan"),
             new TestUser(agent.Id, agent.Email, "Kavya Nair"),
             new TestUser(employee.Id, employee.Email, "Aditya Menon"),
-            new TestUser(assetManager.Id, assetManager.Email, "Vikram Iyer"));
+            new TestUser(assetManager.Id, assetManager.Email, "Vikram Iyer"),
+            new TestUser(administrator.Id, administrator.Email, "Sunita Deshmukh"));
     }
 
     private static User CreateUser(
@@ -256,14 +264,21 @@ public sealed class TestEnvironment : IAsyncLifetime
         }
     }
 
-    /// <summary>Signs in afresh and returns a client whose every request carries that token.</summary>
-    public async Task<HttpClient> SignInAsync(TestUser user)
+    /// <summary>
+    /// Signs in afresh and returns a client whose every request carries that token.
+    /// <para>
+    /// The password is a parameter because an account created through the administration API
+    /// gets a generated one-time password rather than the suite's shared fixture password, and
+    /// the tests that need a real, revocable session are exactly those.
+    /// </para>
+    /// </summary>
+    public async Task<HttpClient> SignInAsync(TestUser user, string? password = null)
     {
         var client = Factory.CreateClient();
 
         var response = await client.PostAsJsonAsync(
             "/api/v1/auth/sign-in",
-            new { email = user.Email, password = Password },
+            new { email = user.Email, password = password ?? Password },
             Json);
 
         response.EnsureSuccessStatusCode();
@@ -318,6 +333,7 @@ public sealed class TestEnvironment : IAsyncLifetime
 /// <param name="Agent">Service desk agent.</param>
 /// <param name="Employee">An ordinary employee with the requester role only.</param>
 /// <param name="AssetManager">Holds asset and licence administration.</param>
+/// <param name="Administrator">Tenant administrator: directory, roles and configuration.</param>
 public sealed record TenantFixture(
     Guid TenantId,
     string Code,
@@ -332,7 +348,10 @@ public sealed record TenantFixture(
     TestUser Employee,
 
     /// <summary>Holds asset and licence administration, which the service desk manager does not.</summary>
-    TestUser AssetManager);
+    TestUser AssetManager,
+
+    /// <summary>Tenant administrator: the directory, roles and tenant configuration.</summary>
+    TestUser Administrator);
 
 /// <param name="Id">User identifier.</param>
 /// <param name="Email">Sign-in address.</param>

@@ -9,25 +9,20 @@ namespace NexaOps.Api.Identity;
 /// for that user.
 /// <para>
 /// This is what makes a permission or password change take effect immediately rather than at
-/// token expiry. The lookup is cached briefly so it costs a database round trip only once per
-/// user per cache window, not once per request.
+/// token expiry. The lookup is cached so it costs a database round trip only once per user per
+/// cache window rather than once per request — and every path that rotates a stamp evicts that
+/// entry, which is what keeps "immediately" true.
 /// </para>
 /// </summary>
 public sealed class SecurityStampValidator
 {
-    /// <summary>
-    /// How long a verified stamp is trusted. Short enough that a revocation is felt almost at
-    /// once, long enough that a busy agent does not hit the database on every call.
-    /// </summary>
-    private static readonly TimeSpan CacheWindow = TimeSpan.FromSeconds(60);
-
     private readonly IDbContextFactory<NexaOpsDbContext> _contextFactory;
-    private readonly IApplicationCache _cache;
+    private readonly ISecurityStampCache _cache;
     private readonly ILogger<SecurityStampValidator> _logger;
 
     public SecurityStampValidator(
         IDbContextFactory<NexaOpsDbContext> contextFactory,
-        IApplicationCache cache,
+        ISecurityStampCache cache,
         ILogger<SecurityStampValidator> logger)
     {
         _contextFactory = contextFactory;
@@ -41,9 +36,7 @@ public sealed class SecurityStampValidator
         string presentedStamp,
         CancellationToken cancellationToken = default)
     {
-        var key = $"security-stamp:{userId:N}";
-
-        var current = await _cache.GetAsync<StampEnvelope>(key, cancellationToken).ConfigureAwait(false);
+        var current = await _cache.GetAsync(userId, cancellationToken).ConfigureAwait(false);
 
         if (current is null)
         {
@@ -69,11 +62,11 @@ public sealed class SecurityStampValidator
                 return false;
             }
 
-            current = new StampEnvelope(stamp.SecurityStamp);
-            await _cache.SetAsync(key, current, CacheWindow, cancellationToken).ConfigureAwait(false);
+            current = stamp.SecurityStamp;
+            await _cache.SetAsync(userId, current, cancellationToken).ConfigureAwait(false);
         }
 
-        var matches = string.Equals(current.Value, presentedStamp, StringComparison.Ordinal);
+        var matches = string.Equals(current, presentedStamp, StringComparison.Ordinal);
 
         if (!matches)
         {
@@ -84,7 +77,4 @@ public sealed class SecurityStampValidator
 
         return matches;
     }
-
-    /// <summary>Wrapper so the cache stores a reference type, as its contract requires.</summary>
-    public sealed record StampEnvelope(string Value);
 }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, useEffect, useMemo, useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import { AppShell } from '@/components/AppShell';
@@ -25,15 +25,26 @@ import { ChangeListPage } from '@/features/changes/ChangeListPage';
 import { ChangeDetailPage } from '@/features/changes/ChangeDetailPage';
 import { KnowledgePage } from '@/features/knowledge/KnowledgePage';
 import { ArticleDetailPage } from '@/features/knowledge/ArticleDetailPage';
-import { CmdbPage } from '@/features/cmdb/CmdbPage';
-import { CiDetailPage } from '@/features/cmdb/CiDetailPage';
-import { AssetsPage } from '@/features/assets/AssetsPage';
-import { AssetDetailPage } from '@/features/assets/AssetDetailPage';
-import { WorkflowsPage } from '@/features/workflows/WorkflowsPage';
-import { WorkflowEditorPage } from '@/features/workflows/WorkflowEditorPage';
-import { ReportsPage } from '@/features/reports/ReportsPage';
-import { AuditPage } from '@/features/audit/AuditPage';
 import { NotFoundPage } from '@/features/NotFoundPage';
+
+/**
+ * Routes most people never open, split out of the main bundle.
+ *
+ * The everyday path — the dashboard, incidents, requests — stays eager, because making somebody
+ * wait for a chunk to arrive before they can log a ticket would be a poor trade. Administration,
+ * reporting and the configuration screens are opened by a handful of people occasionally, and
+ * there is no reason every requester should download them to raise a request.
+ */
+const CmdbPage = lazy(() => import('@/features/cmdb/CmdbPage').then((m) => ({ default: m.CmdbPage })));
+const CiDetailPage = lazy(() => import('@/features/cmdb/CiDetailPage').then((m) => ({ default: m.CiDetailPage })));
+const AssetsPage = lazy(() => import('@/features/assets/AssetsPage').then((m) => ({ default: m.AssetsPage })));
+const AssetDetailPage = lazy(() => import('@/features/assets/AssetDetailPage').then((m) => ({ default: m.AssetDetailPage })));
+const WorkflowsPage = lazy(() => import('@/features/workflows/WorkflowsPage').then((m) => ({ default: m.WorkflowsPage })));
+const WorkflowEditorPage = lazy(() => import('@/features/workflows/WorkflowEditorPage').then((m) => ({ default: m.WorkflowEditorPage })));
+const ReportsPage = lazy(() => import('@/features/reports/ReportsPage').then((m) => ({ default: m.ReportsPage })));
+const SettingsPage = lazy(() => import('@/features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })));
+const AuditPage = lazy(() => import('@/features/audit/AuditPage').then((m) => ({ default: m.AuditPage })));
+
 
 const COLOR_MODE_KEY = 'nexaops.colorMode';
 
@@ -271,6 +282,15 @@ export function App() {
             element={
               <RequireAuth permission={Permissions.reportView}>
                 <ReportsPage />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="settings"
+            element={
+              <RequireAuth permission={Permissions.categoryRead}>
+                <SettingsPage />
               </RequireAuth>
             }
           />

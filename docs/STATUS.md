@@ -3,8 +3,8 @@
 **As of 8 September 2026.** Phase 1 (platform foundation), Incident Management, Phase 2
 (Service Requests, Service Catalogue and Approvals) Phase 3 (Problem Management), Phase 4
 (Change Management and the CAB) Phase 5 (Knowledge Base), Phase 6 (CMDB),
-Phase 7 (Asset Management), Phase 8 (workflow automation) and Phase 9 (reporting),
-plus a demo environment.
+Phase 7 (Asset Management), Phase 8 (workflow automation), Phase 9 (reporting) and
+Phase 10 (tenant administration), plus a demo environment.
 
 This document is written to be handed to someone who has to decide whether to rely on this. It
 lists what works, what does not, and what is deliberately absent — with the gaps in the same
@@ -17,17 +17,17 @@ detail as the achievements.
 | Gate | Result |
 |---|---|
 | `dotnet build NexaOps.slnx -warnaserror` | **0 warnings, 0 errors** |
-| `dotnet test NexaOps.slnx` | **602 passing** |
+| `dotnet test NexaOps.slnx` | **620 passing** |
 | `npm run typecheck` | Clean |
 | `npm run lint` | Clean |
 | `npm run test` | **38 passing** |
-| `npm run build` | Succeeds — ~274 KB gzipped, 4 chunks |
+| `npm run build` | Succeeds — ~129 KB gzipped entry, routes code-split |
 | `az bicep build --file infra/bicep/main.bicep` | **0 warnings** |
 | NuGet audit (`NuGetAuditMode=all`, moderate) | No advisories |
 | `npm audit` | No advisories |
 | gitleaks (full history) | No secrets |
 
-640 tests total (344 domain, 55 application, 203 integration, 38 front end). Breakdown and
+658 tests total (344 domain, 55 application, 221 integration, 38 front end). Breakdown and
 strategy in [TESTING.md](TESTING.md).
 
 > Two of these gates were previously reported as passing when they were not. `dotnet build`
@@ -233,6 +233,43 @@ misleadingly populated.
 reporting, and any figure that would need status history (time in each state, backlog as at a
 past date). Reports read the whole tenant — there is no row-level scoping beyond an optional
 assignment-group filter, so `report.view` is a permission to see the tenant's aggregate position.
+
+### Tenant administration — complete
+
+This is the module that decides whether a customer can run NexaOps without a developer. Before
+it, categories, groups, roles and the directory were all API-only.
+
+- **Revoking access takes effect on the next request, not at token expiry.** Every access token
+  carries a security stamp that the API compares on each call; changing somebody's roles,
+  disabling their account or changing their sign-in address rotates it.
+- **Granting a role is a different permission from editing a person.** `user.manage` maintains
+  job titles and phone numbers; `role.manage` decides what somebody can do. A service desk
+  manager holds neither.
+- **A tenant cannot award itself platform permissions.** They are refused on the way in, filtered
+  on the way out, and withheld from the permission catalogue the editor renders — a tenant
+  administrator is on the wrong side of that boundary and there is no point advertising it.
+- **An unknown permission code is refused rather than stored.** Stored, it would be a grant that
+  matches nothing: access apparently given and none actually given.
+- **Built-in roles cannot be edited or deleted.** The seeder maintains them, so an edit would be
+  silently reverted on the next provisioning run. Refusing is better than accepting and losing it.
+- **A role somebody holds cannot be deleted**, and neither can a category records classify to.
+  Both would strip something from records that depend on it, and the audit trail would record the
+  wrong event — a role deletion rather than the access change each person experienced.
+  Deactivation is offered instead, and the refusal message says so.
+- **A category cannot be moved between modules.** Records already classified there would be left
+  under a taxonomy that no longer claims them: visible in a list, unreachable from any filter.
+- **An administrator cannot disable their own account.** Recoverable only by somebody else, and
+  in a tenant with one administrator there may be nobody else.
+- **A new account's password is shown once and never stored in the clear.** It is generated from
+  a cryptographic source, and under federated authentication none is issued at all — minting a
+  local password in an Entra tenant would create a second, unmanaged way in.
+- Disabled people **stay listed in their groups** rather than vanishing: a team that still
+  formally contains somebody who has left is a fact worth seeing.
+
+**Not built:** organisations and departments, SLA definitions, business calendars and holidays,
+system settings, and subcategory editing — all still API-only. Administrator-initiated password
+resets are not built either: the flow needs email delivery and a token, and half of one would be
+worse than none.
 
 ### Knowledge Base — complete
 
@@ -460,6 +497,8 @@ detail in [SECURITY.md §7](SECURITY.md) and [TESTING.md §9](TESTING.md).
 | `GroupBy` with a key reaching through a navigation | 500 on the dashboard workload panel |
 | Invalid sort field returned 409 | Wrong status; now 400 with field errors |
 | Audit row volume during seeding | Command timeouts. Fixed with batching and an audit-suppression scope |
+| The security stamp was cached for 60s and never evicted | Revoking a role, disabling an account or changing a password took up to a minute to bite, while the code claimed "immediately". The cache also used the tenant-prefixed key while validation runs before a tenant scope exists, so a naive eviction would have looked right and done nothing |
+| Deleting a role with permissions threw | The tracked grants were orphaned rather than cascaded; the delete returned 500 |
 | The workflow recursion guard guarded a path nothing reached | A rule's own action never re-entered the engine, so "automation does not trigger automation" was an untested claim. Actions now raise their corresponding trigger, which the guard refuses and records |
 | Asset return took its destination status from the caller, unconstrained | A service desk manager holding only `asset.assign` could return an asset straight to Disposed — around the narrower `asset.dispose` permission, and with no disposal date recorded |
 
@@ -467,16 +506,17 @@ detail in [SECURITY.md §7](SECURITY.md) and [TESTING.md §9](TESTING.md).
 
 ## 7. Next implementation phase
 
-**Recommended: the settings and administration UI.**
+**Recommended: finishing the administration surface, then the virtual agent.**
 
-Nine modules now exist. The gap that most limits who can actually run this is configuration:
-categories, groups, roles, SLA definitions and business calendars are all API-only, so a customer
-cannot set up their own tenant without a developer. Everything else on the list is an addition;
-this one is a prerequisite for the product being self-serviceable at all.
+Ten modules exist and a tenant can now be configured through the product for the things that
+matter most — people, roles, teams and the taxonomy. What is left of administration is narrower
+but still forces a developer into the loop: SLA definitions, business calendars and holidays, and
+system settings.
 
 Still to build, in the order they earn their place:
 
-1. **Settings and administration UI** — categories, groups, roles, SLA definitions, calendars.
+1. **The rest of administration** — SLA definitions, calendars and holidays, system settings,
+   organisations and departments, subcategory editing.
 2. **Virtual agent** on the existing grounded AI abstraction.
 3. **Integration surface** — inbound email, a mobile client, third-party connectors.
 4. **Scheduled and outcome-driven workflow triggers** — a timer, an approval outcome, an SLA

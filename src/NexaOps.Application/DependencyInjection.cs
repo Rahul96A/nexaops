@@ -1,5 +1,6 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
+using NexaOps.Application.Administration;
 using NexaOps.Application.Ai;
 using NexaOps.Application.Ai.Tools;
 using NexaOps.Application.Changes;
@@ -44,6 +45,11 @@ public static class DependencyInjection
 
         // Asset management.
         services.AddScoped<IAssetService, AssetService>();
+
+        // Administration: the tenant's own configuration.
+        services.AddScoped<IUserAdminService, UserAdminService>();
+        services.AddScoped<IRoleAdminService, RoleAdminService>();
+        services.AddScoped<ITaxonomyAdminService, TaxonomyAdminService>();
 
         // Reporting.
         services.AddScoped<IReportService, ReportService>();

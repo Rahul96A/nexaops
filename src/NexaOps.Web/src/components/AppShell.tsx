@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { Suspense, useState, type ReactNode } from 'react';
 import { Link as RouterLink, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   AppBar,
@@ -8,6 +8,7 @@ import {
   Divider,
   Drawer,
   IconButton,
+  LinearProgress,
   List,
   ListItemButton,
   ListItemIcon,
@@ -35,6 +36,7 @@ import HubOutlinedIcon from '@mui/icons-material/HubOutlined';
 import DevicesOtherOutlinedIcon from '@mui/icons-material/DevicesOtherOutlined';
 import AutoModeOutlinedIcon from '@mui/icons-material/AutoModeOutlined';
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
@@ -66,9 +68,10 @@ interface NavSection {
 /**
  * The left navigation.
  *
- * Modules that are not built yet appear, greyed, with an explicit "later phase" marker. That
- * is a deliberate choice over hiding them: a prospect seeing the shape of the product is
- * useful, a prospect clicking a live-looking link into an empty page is not.
+ * Every entry here leads somewhere real. The `comingSoon` marker is kept for the next module
+ * that is announced before it lands — greying an entry is a deliberate choice over hiding it,
+ * because a prospect seeing the shape of the product is useful and a prospect clicking a
+ * live-looking link into an empty page is not — but nothing currently uses it.
  */
 const NAVIGATION: NavSection[] = [
   {
@@ -163,7 +166,12 @@ const NAVIGATION: NavSection[] = [
         icon: <InsightsOutlinedIcon />,
         permission: Permissions.reportView,
       },
-      { label: 'Settings', to: '/settings', icon: <ConfirmationNumberOutlinedIcon />, comingSoon: true },
+      {
+        label: 'Settings',
+        to: '/settings',
+        icon: <SettingsOutlinedIcon />,
+        permission: Permissions.categoryRead,
+      },
     ],
   },
 ];
@@ -422,7 +430,14 @@ export function AppShell({
       >
         <Toolbar />
         <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1600, mx: 'auto' }}>
-          <Outlet />
+          {/*
+            Routes that are code-split resolve here. The boundary sits inside the shell so the
+            navigation and header stay put while a chunk arrives — a whole-page spinner for a
+            200ms download reads as a slower application than it is.
+          */}
+          <Suspense fallback={<LinearProgress />}>
+            <Outlet />
+          </Suspense>
         </Box>
       </Box>
     </Box>

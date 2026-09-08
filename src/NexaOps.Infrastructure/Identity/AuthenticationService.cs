@@ -21,6 +21,7 @@ public sealed class AuthenticationService : IAuthenticationService
 {
     private readonly NexaOpsDbContext _context;
     private readonly IPasswordHasher<User> _passwordHasher;
+    private readonly ISecurityStampCache _stampCache;
     private readonly AuthOptions _options;
     private readonly ITenantContextSetter _tenantSetter;
     private readonly ITenantContext _tenant;
@@ -33,6 +34,7 @@ public sealed class AuthenticationService : IAuthenticationService
     public AuthenticationService(
         NexaOpsDbContext context,
         IPasswordHasher<User> passwordHasher,
+        ISecurityStampCache stampCache,
         IOptions<AuthOptions> options,
         ITenantContextSetter tenantSetter,
         ITenantContext tenant,
@@ -44,6 +46,7 @@ public sealed class AuthenticationService : IAuthenticationService
     {
         _context = context;
         _passwordHasher = passwordHasher;
+        _stampCache = stampCache;
         _options = options.Value;
         _tenantSetter = tenantSetter;
         _tenant = tenant;
@@ -340,8 +343,11 @@ public sealed class AuthenticationService : IAuthenticationService
         user.MustChangePassword = false;
 
         // Rotating the stamp invalidates every access token already issued for this user, so a
-        // token stolen before the password change stops working immediately.
+        // token stolen before the password change stops working immediately. The cached copy has
+        // to go with it: without the eviction the API keeps comparing against the old value for
+        // the length of the cache window, and "immediately" quietly becomes "within a minute".
         user.SecurityStamp = Guid.NewGuid().ToString("N");
+        await _stampCache.InvalidateAsync(user.Id, cancellationToken).ConfigureAwait(false);
 
         await RevokeAllSessionsAsync(user.Id, "password_changed", cancellationToken).ConfigureAwait(false);
 

@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using NexaOps.Application.Administration;
 using NexaOps.Application.Abstractions;
 using NexaOps.Application.Ai;
 using NexaOps.Application.Identity;
@@ -152,6 +153,10 @@ public static class DependencyInjection
         services.AddScoped<IAssetRepository, AssetRepository>();
         services.AddScoped<IAssetQueryService, AssetQueryService>();
 
+        // Administration.
+        services.AddScoped<IAdministrationRepository, AdministrationRepository>();
+        services.AddScoped<IAdministrationQueryService, AdministrationQueryService>();
+
         // Reporting.
         services.AddScoped<IReportQueryService, ReportQueryService>();
 
@@ -192,6 +197,11 @@ public static class DependencyInjection
                 })));
 
         services.AddScoped<IAuthenticationService, AuthenticationService>();
+        services.AddScoped<ICredentialService, CredentialService>();
+
+        // Keyed by user rather than by tenant, and evicted wherever a stamp is rotated. See the
+        // interface for why it is not the general application cache.
+        services.AddScoped<ISecurityStampCache, SecurityStampCache>();
         services.AddScoped<INotificationService, NotificationService>();
     }
 

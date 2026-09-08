@@ -1444,3 +1444,140 @@ export interface RequestReport {
   daily: DailyVolume[];
   byCatalogItem: BreakdownRow[];
 }
+
+// --- Administration ---
+
+/** The record types that share the platform taxonomy. Mirrors the server enum. */
+export type ServiceModule =
+  | 'Incident' | 'Request' | 'Problem' | 'Change'
+  | 'Knowledge' | 'Asset' | 'ConfigurationItem';
+
+export type UserStatus = 'Active' | 'Disabled' | 'Suspended' | 'Locked';
+
+export type GroupType = 'Assignment' | 'Approval' | 'Notification' | 'Security';
+
+export interface SubcategoryAdmin {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  defaultAssignmentGroupId?: string | null;
+  defaultAssignmentGroupName?: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  recordCount: number;
+}
+
+export interface CategoryAdmin {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  module: ServiceModule;
+  defaultAssignmentGroupId?: string | null;
+  defaultAssignmentGroupName?: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  recordCount: number;
+  subcategories: SubcategoryAdmin[];
+  rowVersion?: string | null;
+}
+
+export interface GroupMemberAdmin {
+  userId: string;
+  displayName: string;
+  email: string;
+  jobTitle?: string | null;
+  avatarColor?: string | null;
+  isLead: boolean;
+  isActive: boolean;
+}
+
+export interface GroupAdmin {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  type: GroupType;
+  email?: string | null;
+  managerUserId?: string | null;
+  managerName?: string | null;
+  defaultAssigneeUserId?: string | null;
+  defaultAssigneeName?: string | null;
+  businessCalendarId?: string | null;
+  businessCalendarName?: string | null;
+  isActive: boolean;
+  memberCount: number;
+  members: GroupMemberAdmin[];
+  rowVersion?: string | null;
+}
+
+export interface RoleSummary {
+  id: string;
+  code: string;
+  name: string;
+  isSystem: boolean;
+}
+
+export interface RoleDetail {
+  id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  isSystem: boolean;
+  userCount: number;
+  permissions: string[];
+  rowVersion?: string | null;
+}
+
+export interface PermissionInfo {
+  code: string;
+  category: string;
+  name: string;
+  description: string;
+}
+
+export interface UserListItem {
+  id: string;
+  email: string;
+  displayName: string;
+  jobTitle?: string | null;
+  departmentName?: string | null;
+  status: UserStatus;
+  avatarColor?: string | null;
+  lastLoginAt?: string | null;
+  roleCount: number;
+}
+
+export interface UserAdmin {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  displayName: string;
+  phoneNumber?: string | null;
+  employeeId?: string | null;
+  jobTitle?: string | null;
+  organizationId?: string | null;
+  organizationName?: string | null;
+  departmentId?: string | null;
+  departmentName?: string | null;
+  managerId?: string | null;
+  managerName?: string | null;
+  location?: string | null;
+  timeZoneId?: string | null;
+  locale?: string | null;
+  status: UserStatus;
+  isServiceAccount: boolean;
+  mustChangePassword: boolean;
+  lastLoginAt?: string | null;
+  roles: RoleSummary[];
+  groups: string[];
+  rowVersion?: string | null;
+}
+
+/** Returned once, on creation. The password is never retrievable afterwards. */
+export interface CreatedUser {
+  user: UserAdmin;
+  temporaryPassword?: string | null;
+}
