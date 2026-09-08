@@ -500,3 +500,237 @@ export interface AiAnswer {
   inputTokens: number;
   outputTokens: number;
 }
+
+// ---------------------------------------------------------------------------
+// Service catalogue, requests and approvals
+// ---------------------------------------------------------------------------
+
+export type CatalogItemStatus = 'Draft' | 'Published' | 'Retired';
+
+export type VariableType =
+  | 'Text'
+  | 'TextArea'
+  | 'Number'
+  | 'Date'
+  | 'Boolean'
+  | 'Choice'
+  | 'MultiChoice'
+  | 'User'
+  | 'Group';
+
+export type RequestStatus =
+  | 'Draft'
+  | 'AwaitingApproval'
+  | 'Approved'
+  | 'InProgress'
+  | 'Pending'
+  | 'Fulfilled'
+  | 'Closed'
+  | 'Rejected'
+  | 'Cancelled';
+
+export type RequestItemStatus = 'Pending' | 'InProgress' | 'Fulfilled' | 'Cancelled';
+
+export type ApprovalState = 'Pending' | 'Approved' | 'Rejected' | 'Cancelled' | 'NotRequired';
+
+export type ApprovalRule = 'Unanimous' | 'AnyOne';
+
+export type ApprovalTargetKind = 'User' | 'Group' | 'Manager';
+
+export interface CatalogVariable {
+  id: string;
+  key: string;
+  label: string;
+  helpText?: string | null;
+  type: VariableType;
+  isRequired: boolean;
+  sortOrder: number;
+  defaultValue?: string | null;
+  choices: string[];
+  maxLength?: number | null;
+  minValue?: number | null;
+  maxValue?: number | null;
+}
+
+export interface CatalogItemSummary {
+  id: string;
+  code: string;
+  name: string;
+  shortDescription: string;
+  categoryId?: string | null;
+  categoryName?: string | null;
+  status: CatalogItemStatus;
+  cost?: number | null;
+  estimatedDeliveryDays?: number | null;
+  icon?: string | null;
+  requiresApproval: boolean;
+  sortOrder: number;
+}
+
+export interface CatalogItemDetail extends Omit<CatalogItemSummary, 'sortOrder'> {
+  description: string;
+  priority: Priority;
+  maxQuantity?: number | null;
+  approvalTargetKind: ApprovalTargetKind;
+  approverName?: string | null;
+  fulfilmentGroupId?: string | null;
+  fulfilmentGroupName?: string | null;
+  variables: CatalogVariable[];
+  rowVersion?: string | null;
+}
+
+export interface RequestItem {
+  id: string;
+  catalogItemId: string;
+  catalogItemName: string;
+  quantity: number;
+  unitCost?: number | null;
+  lineCost?: number | null;
+  status: RequestItemStatus;
+  values: Record<string, string>;
+  fulfilmentGroupId?: string | null;
+  fulfilmentGroupName?: string | null;
+  assignedToUserId?: string | null;
+  assignedToName?: string | null;
+  fulfilledAt?: string | null;
+  fulfilmentNotes?: string | null;
+}
+
+export interface Approval {
+  id: string;
+  stage: number;
+  rule: ApprovalRule;
+  targetKind: ApprovalTargetKind;
+  approverUserId?: string | null;
+  approverName?: string | null;
+  approverGroupId?: string | null;
+  approverGroupName?: string | null;
+  state: ApprovalState;
+  decidedByUserId?: string | null;
+  decidedByName?: string | null;
+  decidedAt?: string | null;
+  comment?: string | null;
+  recordLabel: string;
+  module: string;
+  recordId: string;
+  recordNumber?: string | null;
+}
+
+export interface RequestComment {
+  id: string;
+  kind: IncidentCommentKind;
+  body: string;
+  authorId: string;
+  authorDisplayName: string;
+  createdAt: string;
+}
+
+export interface RequestSummary {
+  id: string;
+  number: string;
+  title: string;
+  status: RequestStatus;
+  priority: Priority;
+  requesterId: string;
+  requesterName: string;
+  requestedForId: string;
+  requestedForName: string;
+  assignedToUserId?: string | null;
+  assignedToName?: string | null;
+  assignedToAvatarColor?: string | null;
+  fulfilmentGroupId?: string | null;
+  fulfilmentGroupName?: string | null;
+  itemCount: number;
+  totalCost?: number | null;
+  hasBreachedSla: boolean;
+  nextSlaDueAt?: string | null;
+  createdAt: string;
+}
+
+export interface RequestDetail {
+  id: string;
+  number: string;
+  title: string;
+  description: string;
+  status: RequestStatus;
+  pendingReason?: string | null;
+  channel: string;
+  priority: Priority;
+  requesterId: string;
+  requesterName: string;
+  requestedForId: string;
+  requestedForName: string;
+  categoryId?: string | null;
+  categoryName?: string | null;
+  fulfilmentGroupId?: string | null;
+  fulfilmentGroupName?: string | null;
+  assignedToUserId?: string | null;
+  assignedToName?: string | null;
+  requiredByDate?: string | null;
+  submittedAt?: string | null;
+  approvedAt?: string | null;
+  fulfilledAt?: string | null;
+  closedAt?: string | null;
+  rejectionReason?: string | null;
+  cancellationReason?: string | null;
+  totalCost?: number | null;
+  hasBreachedSla: boolean;
+  nextSlaDueAt?: string | null;
+  createdAt: string;
+  items: RequestItem[];
+  approvals: Approval[];
+  allowedTransitions: RequestStatus[];
+  rowVersion?: string | null;
+}
+
+export interface RequestStatusCount {
+  status: RequestStatus;
+  count: number;
+}
+
+export interface RequestSummaryCounts {
+  openRequests: number;
+  awaitingApproval: number;
+  awaitingMyApproval: number;
+  unassigned: number;
+  assignedToMe: number;
+  raisedByMe: number;
+  breachedOpen: number;
+  fulfilledToday: number;
+  createdToday: number;
+  openByStatus: RequestStatusCount[];
+}
+
+export interface RequestLineInput {
+  catalogItemId: string;
+  quantity: number;
+  values: Record<string, string>;
+}
+
+export interface CreateRequestRequest {
+  title?: string;
+  description?: string;
+  requestedForId?: string | null;
+  requiredByDate?: string | null;
+  items: RequestLineInput[];
+}
+
+export interface RequestSearchParams {
+  search?: string;
+  status?: string;
+  priority?: string;
+  assignedToUserId?: string;
+  fulfilmentGroupId?: string;
+  scope?: string;
+  openOnly?: boolean;
+  breachedOnly?: boolean;
+  sortBy?: string;
+  sortDescending?: boolean;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface DecideApprovalRequest {
+  approved: boolean;
+  comment?: string;
+}

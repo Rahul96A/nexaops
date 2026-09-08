@@ -14,6 +14,11 @@ import { IncidentListPage } from '@/features/incidents/IncidentListPage';
 import { IncidentDetailPage } from '@/features/incidents/IncidentDetailPage';
 import { NewIncidentPage } from '@/features/incidents/NewIncidentPage';
 import { MyWorkPage } from '@/features/incidents/MyWorkPage';
+import { CatalogPage } from '@/features/catalog/CatalogPage';
+import { OrderCatalogItemPage } from '@/features/catalog/OrderCatalogItemPage';
+import { RequestListPage } from '@/features/requests/RequestListPage';
+import { RequestDetailPage } from '@/features/requests/RequestDetailPage';
+import { ApprovalsPage } from '@/features/approvals/ApprovalsPage';
 import { AuditPage } from '@/features/audit/AuditPage';
 import { NotFoundPage } from '@/features/NotFoundPage';
 
@@ -82,6 +87,51 @@ export function App() {
             element={
               <RequireAuth permission={Permissions.incidentRead}>
                 <IncidentDetailPage />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="catalog"
+            element={
+              <RequireAuth permission={Permissions.catalogRead}>
+                <CatalogPage />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="catalog/:id"
+            element={
+              <RequireAuth permission={Permissions.catalogRead}>
+                <OrderCatalogItemPage />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="requests"
+            element={
+              <RequireAuth permission={Permissions.requestRead}>
+                <RequestListPage />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="requests/:id"
+            element={
+              <RequireAuth permission={Permissions.requestRead}>
+                <RequestDetailPage />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="approvals"
+            element={
+              <RequireAuth permission={Permissions.approvalAct}>
+                <ApprovalsPage />
               </RequireAuth>
             }
           />

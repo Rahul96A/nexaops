@@ -23,6 +23,24 @@ export const Permissions = {
   incidentExport: 'incident.export',
   incidentArchive: 'incident.archive',
 
+  catalogRead: 'catalog.read',
+  catalogManage: 'catalog.manage',
+
+  requestRead: 'request.read',
+  requestReadAll: 'request.read.all',
+  requestCreate: 'request.create',
+  requestUpdate: 'request.update',
+  requestAssign: 'request.assign',
+  requestFulfil: 'request.fulfil',
+  requestClose: 'request.close',
+  requestCancel: 'request.cancel',
+  requestCommentCreate: 'request.comment.create',
+  requestWorkNoteRead: 'request.worknote.read',
+  requestWorkNoteCreate: 'request.worknote.create',
+
+  approvalAct: 'approval.act',
+  approvalReadAll: 'approval.read.all',
+
   categoryRead: 'category.read',
   categoryManage: 'category.manage',
   groupRead: 'group.read',

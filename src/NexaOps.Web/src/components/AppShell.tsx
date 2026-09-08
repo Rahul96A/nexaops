@@ -23,6 +23,8 @@ import {
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
+import StorefrontOutlinedIcon from '@mui/icons-material/StorefrontOutlined';
+import HowToRegOutlinedIcon from '@mui/icons-material/HowToRegOutlined';
 import ConfirmationNumberOutlinedIcon from '@mui/icons-material/ConfirmationNumberOutlined';
 import AssignmentIndOutlinedIcon from '@mui/icons-material/AssignmentIndOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
@@ -78,11 +80,27 @@ const NAVIGATION: NavSection[] = [
   {
     heading: 'Service management',
     items: [
-      { label: 'Requests', to: '/requests', icon: <ConfirmationNumberOutlinedIcon />, comingSoon: true },
+      {
+        label: 'Service catalogue',
+        to: '/catalog',
+        icon: <StorefrontOutlinedIcon />,
+        permission: Permissions.catalogRead,
+      },
+      {
+        label: 'Requests',
+        to: '/requests',
+        icon: <ConfirmationNumberOutlinedIcon />,
+        permission: Permissions.requestRead,
+      },
+      {
+        label: 'Approvals',
+        to: '/approvals',
+        icon: <HowToRegOutlinedIcon />,
+        permission: Permissions.approvalAct,
+      },
       { label: 'Problems', to: '/problems', icon: <ConfirmationNumberOutlinedIcon />, comingSoon: true },
       { label: 'Changes', to: '/changes', icon: <ConfirmationNumberOutlinedIcon />, comingSoon: true },
       { label: 'Knowledge', to: '/knowledge', icon: <ConfirmationNumberOutlinedIcon />, comingSoon: true },
-      { label: 'Service catalog', to: '/catalog', icon: <ConfirmationNumberOutlinedIcon />, comingSoon: true },
     ],
   },
   {
