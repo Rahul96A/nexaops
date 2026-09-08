@@ -148,6 +148,7 @@ public sealed class AiSecurityTests
         var result = await executor.ExecuteAsync("search_incidents", "{ not valid json");
 
         result.Succeeded.ShouldBeFalse();
+        result.Error.ShouldNotBeNull();
         result.Error.ShouldContain("permission");
         result.Error.ShouldNotContain("JSON");
     }

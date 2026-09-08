@@ -315,7 +315,7 @@ public sealed class TenantIsolationTests
         var unfiltered = context.Model.GetEntityTypes()
             .Where(e => typeof(ITenantOwned).IsAssignableFrom(e.ClrType))
             .Where(e => e.BaseType is null)
-            .Where(e => e.GetQueryFilter() is null)
+            .Where(e => e.GetDeclaredQueryFilters() is null or { Count: 0 })
             .Select(e => e.ClrType.Name)
             .ToList();
 

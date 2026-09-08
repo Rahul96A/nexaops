@@ -418,6 +418,7 @@ public sealed class IncidentLifecycleTests
         var escalated = await response.Content.ReadFromJsonAsync<IncidentDetailDto>(TestEnvironment.Json);
         escalated!.Priority.ShouldBe(Priority.P1Critical);
         escalated.IsPriorityOverridden.ShouldBeTrue();
+        escalated.PriorityOverrideReason.ShouldNotBeNull();
         escalated.PriorityOverrideReason.ShouldContain("quarter-end close");
 
         // The commitment tightens to the P1 target, measured from the original creation time.
@@ -488,6 +489,8 @@ public sealed class IncidentLifecycleTests
 
         var update = audit.FirstOrDefault(a => a.ChangedFields is not null && a.ChangedFields.Contains("Title"));
         update.ShouldNotBeNull();
+        update.BeforeJson.ShouldNotBeNull();
+        update.AfterJson.ShouldNotBeNull();
         update.BeforeJson.ShouldContain("Incident whose history is inspected");
         update.AfterJson.ShouldContain("Renamed for the audit trail");
         update.ActorDisplayName.ShouldBe("Priya Raghavan");
