@@ -64,6 +64,14 @@ export const Permissions = {
   changeWorkNoteRead: 'change.worknote.read',
   changeRaiseEmergency: 'change.raise_emergency',
 
+  knowledgeRead: 'knowledge.read',
+  knowledgeReadInternal: 'knowledge.read.internal',
+  knowledgeCreate: 'knowledge.create',
+  knowledgeUpdate: 'knowledge.update',
+  knowledgePublish: 'knowledge.publish',
+  knowledgeRetire: 'knowledge.retire',
+  knowledgeFeedback: 'knowledge.feedback',
+
   approvalAct: 'approval.act',
   approvalReadAll: 'approval.read.all',
 

@@ -51,6 +51,11 @@ public static class SystemRoles
         // Knowing what is being changed to the services you depend on is not privileged.
         Permissions.ChangeRead,
 
+        // The knowledge module only pays for itself if the people raising tickets can find the
+        // answer before they do.
+        Permissions.KnowledgeRead,
+        Permissions.KnowledgeFeedback,
+
         // Granted to everyone because approval is scoped by the approval record itself, not by
         // this permission: holding it lets a user act on approvals addressed to them and on
         // nothing else. Line-manager approval means any employee may be an approver, so gating
@@ -98,7 +103,11 @@ public static class SystemRoles
         Permissions.ChangeUpdate,
         Permissions.ChangeImplement,
         Permissions.ChangeCommentCreate,
-        Permissions.ChangeWorkNoteRead
+        Permissions.ChangeWorkNoteRead,
+
+        Permissions.KnowledgeReadInternal,
+        Permissions.KnowledgeCreate,
+        Permissions.KnowledgeUpdate
     ];
 
     private static readonly string[] ServiceDeskManagerPermissions =
@@ -134,7 +143,12 @@ public static class SystemRoles
         Permissions.ChangeSchedule,
         Permissions.ChangeReview,
         Permissions.ChangeClose,
-        Permissions.ChangeCancel
+        Permissions.ChangeCancel,
+
+        // Publishing puts an article in front of the whole organisation, so it is separate from
+        // writing one: an author cannot self-publish unreviewed guidance.
+        Permissions.KnowledgePublish,
+        Permissions.KnowledgeRetire
     ];
 
     /// <summary>The seed definition of one role.</summary>
@@ -278,12 +292,18 @@ public static class SystemRoles
 
         new(KnowledgeManager,
             "Knowledge Manager",
-            "Owns the knowledge base lifecycle. Knowledge management ships in a later phase.",
+            "Owns the knowledge base: commissions articles, reviews them, publishes and retires them, and watches which ones actually help.",
             [
                 .. BaselinePermissions,
                 Permissions.IncidentReadAll,
                 Permissions.ReportView,
-                Permissions.AiAssistantUse
+                Permissions.AiAssistantUse,
+                Permissions.KnowledgeReadInternal,
+                Permissions.KnowledgeCreate,
+                Permissions.KnowledgeUpdate,
+                Permissions.KnowledgePublish,
+                Permissions.KnowledgeRetire,
+                Permissions.CategoryRead
             ]),
 
         new(ReportViewer,

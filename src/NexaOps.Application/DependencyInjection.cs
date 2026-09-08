@@ -4,6 +4,7 @@ using NexaOps.Application.Ai;
 using NexaOps.Application.Ai.Tools;
 using NexaOps.Application.Changes;
 using NexaOps.Application.Incidents;
+using NexaOps.Application.Knowledge;
 using NexaOps.Application.Problems;
 using NexaOps.Application.Requests;
 using NexaOps.Application.Sla;
@@ -30,6 +31,9 @@ public static class DependencyInjection
 
         // Change management.
         services.AddScoped<IChangeService, ChangeService>();
+
+        // Knowledge base.
+        services.AddScoped<IKnowledgeService, KnowledgeService>();
         services.AddScoped<ISlaService, SlaService>();
 
         // Validators are discovered by assembly scan so a new command validator is picked up

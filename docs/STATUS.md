@@ -1,8 +1,8 @@
 # NexaOps — Status
 
 **As of 8 September 2026.** Phase 1 (platform foundation), Incident Management, Phase 2
-(Service Requests, Service Catalogue and Approvals) Phase 3 (Problem Management) and Phase 4
-(Change Management and the CAB), plus a demo environment.
+(Service Requests, Service Catalogue and Approvals) Phase 3 (Problem Management), Phase 4
+(Change Management and the CAB) and Phase 5 (Knowledge Base), plus a demo environment.
 
 This document is written to be handed to someone who has to decide whether to rely on this. It
 lists what works, what does not, and what is deliberately absent — with the gaps in the same
@@ -15,7 +15,7 @@ detail as the achievements.
 | Gate | Result |
 |---|---|
 | `dotnet build NexaOps.slnx -warnaserror` | **0 warnings, 0 errors** |
-| `dotnet test NexaOps.slnx` | **405 passing** |
+| `dotnet test NexaOps.slnx` | **438 passing** |
 | `npm run typecheck` | Clean |
 | `npm run lint` | Clean |
 | `npm run test` | **38 passing** |
@@ -25,7 +25,7 @@ detail as the achievements.
 | `npm audit` | No advisories |
 | gitleaks (full history) | No secrets |
 
-443 tests total (243 domain, 31 application, 131 integration, 38 front end). Breakdown and
+476 tests total (263 domain, 31 application, 144 integration, 38 front end). Breakdown and
 strategy in [TESTING.md](TESTING.md).
 
 > Two of these gates were previously reported as passing when they were not. `dotnet build`
@@ -75,6 +75,28 @@ strategy in [TESTING.md](TESTING.md).
   abandons its clock rather than breaching it. Targets are working days — one, two, three, five
   and ten — because that is how delivery is actually promised.
 - A requester may withdraw their own request without holding `request.cancel`.
+
+### Knowledge Base — complete
+
+- **A stale article stays readable.** Withdrawing guidance the moment its review date passes
+  leaves the service desk with nothing, which is worse than guidance that is merely old. It is
+  flagged as unverified wherever it appears rather than hidden.
+- **Publishing is a separate permission from writing**, so an author cannot self-publish
+  unreviewed guidance to the whole organisation. Publishing also sets the next review date rather
+  than leaving it open-ended.
+- **An unrated article has no rating, not a bad one.** Showing 0% would quietly condemn every new
+  article, so the ratio is null until somebody votes.
+- **Feedback is stored per reader**, so changing your mind moves the vote instead of adding a
+  second one, and "who found this unhelpful and why" is answerable.
+- A reader without `knowledge.read.internal` cannot see that an internal runbook exists at all —
+  invisible, not merely unopenable.
+- **Retired is not terminal.** Withdrawn guidance can be reinstated; forcing a copy would lose the
+  article's history and its usage counters.
+
+**Not built:** Markdown rendering (article bodies display as pre-wrapped plain text — a Markdown
+renderer is a real XSS surface for user-written content and needs sanitising properly), article
+version history, a create/edit form in the UI, and the background sweep that marks published
+articles stale (the domain method and its index exist; nothing schedules it yet).
 
 ### Change Management and the CAB — complete
 
@@ -160,8 +182,8 @@ be demonstrated until some are created through the API.
 
 These appear in the navigation marked **"Later"** and are not clickable. Nothing pretends to work.
 
-Knowledge base, CMDB, asset management, the visual workflow engine, reporting and dashboard
-builder, settings, virtual agent, mobile apps, inbound email, third-party integrations.
+CMDB, asset management, the visual workflow engine, reporting and dashboard builder, settings,
+virtual agent, mobile apps, inbound email, third-party integrations.
 
 Problems and Changes have list and record pages; neither has a create form in the UI yet, so
 raising one goes through the API. Every other operation on them is available in the browser.
@@ -285,7 +307,7 @@ detail in [SECURITY.md §7](SECURITY.md) and [TESTING.md §9](TESTING.md).
 
 ## 7. Next implementation phase
 
-**Recommended: Knowledge Base.**
+**Recommended: CMDB, then Asset Management.**
 
 Why this and not something else:
 

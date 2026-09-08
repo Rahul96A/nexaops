@@ -6,6 +6,7 @@ using NexaOps.Domain.Catalog;
 using NexaOps.Domain.Changes;
 using NexaOps.Domain.Common;
 using NexaOps.Domain.Identity;
+using NexaOps.Domain.Knowledge;
 using NexaOps.Domain.Platform;
 using NexaOps.Domain.Problems;
 using NexaOps.Domain.Requests;
@@ -205,6 +206,10 @@ public class NexaOpsDbContext : DbContext
     // --- Change management ---
     public DbSet<Change> Changes => Set<Change>();
     public DbSet<ChangeComment> ChangeComments => Set<ChangeComment>();
+
+    // --- Knowledge base ---
+    public DbSet<KnowledgeArticle> Articles => Set<KnowledgeArticle>();
+    public DbSet<ArticleFeedback> ArticleFeedback => Set<ArticleFeedback>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

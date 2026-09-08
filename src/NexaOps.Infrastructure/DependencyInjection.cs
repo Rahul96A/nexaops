@@ -14,6 +14,7 @@ using NexaOps.Application.Ai;
 using NexaOps.Application.Identity;
 using NexaOps.Application.Changes;
 using NexaOps.Application.Incidents;
+using NexaOps.Application.Knowledge;
 using NexaOps.Application.Problems;
 using NexaOps.Application.Requests;
 using NexaOps.Application.Notifications;
@@ -134,6 +135,10 @@ public static class DependencyInjection
         // Change management.
         services.AddScoped<IChangeRepository, ChangeRepository>();
         services.AddScoped<IChangeQueryService, ChangeQueryService>();
+
+        // Knowledge base.
+        services.AddScoped<IKnowledgeRepository, KnowledgeRepository>();
+        services.AddScoped<IKnowledgeQueryService, KnowledgeQueryService>();
 
         services.AddScoped<IIncidentQueryService, IncidentQueryService>();
         services.AddScoped<IServiceDeskReferenceRepository, ServiceDeskReferenceRepository>();

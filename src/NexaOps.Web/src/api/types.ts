@@ -978,3 +978,67 @@ export interface ChangeSearchParams {
   page?: number;
   pageSize?: number;
 }
+
+// ---------------------------------------------------------------------------
+// Knowledge base
+// ---------------------------------------------------------------------------
+
+export type ArticleStatus = 'Draft' | 'InReview' | 'Published' | 'Stale' | 'Retired';
+
+export type ArticleAudience = 'Everyone' | 'ServiceDesk';
+
+export interface ArticleSummary {
+  id: string;
+  number: string;
+  title: string;
+  summary: string;
+  status: ArticleStatus;
+  audience: ArticleAudience;
+  categoryId?: string | null;
+  categoryName?: string | null;
+  authorId: string;
+  authorName: string;
+  publishedAt?: string | null;
+  reviewDueAt?: string | null;
+  viewCount: number;
+  /** Null when nobody has rated it — not zero, which would condemn every new article. */
+  helpfulRatio?: number | null;
+  createdAt: string;
+}
+
+export interface ArticleDetail extends ArticleSummary {
+  body: string;
+  keywords?: string | null;
+  reviewerId?: string | null;
+  reviewerName?: string | null;
+  problemId?: string | null;
+  problemNumber?: string | null;
+  submittedForReviewAt?: string | null;
+  retiredAt?: string | null;
+  retirementReason?: string | null;
+  helpfulCount: number;
+  notHelpfulCount: number;
+  /** The reader's own verdict, so the UI can show which button they pressed. */
+  myFeedback?: boolean | null;
+  allowedTransitions: ArticleStatus[];
+  rowVersion?: string | null;
+}
+
+export interface KnowledgeSummaryCounts {
+  published: number;
+  stale: number;
+  inReview: number;
+  drafts: number;
+  myDrafts: number;
+  totalViews: number;
+}
+
+export interface ArticleSearchParams {
+  search?: string;
+  status?: string;
+  scope?: string;
+  sortBy?: string;
+  sortDescending?: boolean;
+  page?: number;
+  pageSize?: number;
+}

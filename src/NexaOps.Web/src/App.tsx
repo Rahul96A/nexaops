@@ -23,6 +23,8 @@ import { ProblemListPage } from '@/features/problems/ProblemListPage';
 import { ProblemDetailPage } from '@/features/problems/ProblemDetailPage';
 import { ChangeListPage } from '@/features/changes/ChangeListPage';
 import { ChangeDetailPage } from '@/features/changes/ChangeDetailPage';
+import { KnowledgePage } from '@/features/knowledge/KnowledgePage';
+import { ArticleDetailPage } from '@/features/knowledge/ArticleDetailPage';
 import { AuditPage } from '@/features/audit/AuditPage';
 import { NotFoundPage } from '@/features/NotFoundPage';
 
@@ -172,6 +174,24 @@ export function App() {
             element={
               <RequireAuth permission={Permissions.changeRead}>
                 <ChangeDetailPage />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="knowledge"
+            element={
+              <RequireAuth permission={Permissions.knowledgeRead}>
+                <KnowledgePage />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="knowledge/:id"
+            element={
+              <RequireAuth permission={Permissions.knowledgeRead}>
+                <ArticleDetailPage />
               </RequireAuth>
             }
           />

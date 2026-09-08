@@ -220,6 +220,33 @@ public static class Permissions
     public const string ChangeRaiseEmergency = "change.raise_emergency";
 
     // ---------------------------------------------------------------
+    // Knowledge
+    // ---------------------------------------------------------------
+
+    /// <summary>
+    /// Read published articles written for everyone. Held by every authenticated user - the
+    /// module only pays for itself if the people raising tickets can find the answer first.
+    /// </summary>
+    public const string KnowledgeRead = "knowledge.read";
+
+    /// <summary>Read service-desk-only articles: runbooks and internal diagnostics.</summary>
+    public const string KnowledgeReadInternal = "knowledge.read.internal";
+
+    public const string KnowledgeCreate = "knowledge.create";
+    public const string KnowledgeUpdate = "knowledge.update";
+
+    /// <summary>
+    /// Publish an article, which puts it in front of the whole organisation. Separate from
+    /// writing one, so an author cannot self-publish unreviewed guidance.
+    /// </summary>
+    public const string KnowledgePublish = "knowledge.publish";
+
+    public const string KnowledgeRetire = "knowledge.retire";
+
+    /// <summary>Say whether an article helped. Every reader holds this.</summary>
+    public const string KnowledgeFeedback = "knowledge.feedback";
+
+    // ---------------------------------------------------------------
     // Reporting
     // ---------------------------------------------------------------
 
@@ -334,6 +361,14 @@ public static class Permissions
         new(ChangeCommentCreate, "Change", "Add change comments", "Add comments and implementation notes."),
         new(ChangeWorkNoteRead, "Change", "View change work notes", "Read internal implementation notes."),
         new(ChangeRaiseEmergency, "Change", "Raise emergency changes", "Raise a change that proceeds without prior approval."),
+
+        new(KnowledgeRead, "Knowledge", "Read articles", "Read published articles written for everyone."),
+        new(KnowledgeReadInternal, "Knowledge", "Read internal articles", "Read service-desk-only runbooks and diagnostics."),
+        new(KnowledgeCreate, "Knowledge", "Write articles", "Create knowledge articles."),
+        new(KnowledgeUpdate, "Knowledge", "Edit articles", "Change article content and classification."),
+        new(KnowledgePublish, "Knowledge", "Publish articles", "Publish an article to the organisation."),
+        new(KnowledgeRetire, "Knowledge", "Retire articles", "Withdraw an article from search."),
+        new(KnowledgeFeedback, "Knowledge", "Rate articles", "Say whether an article helped."),
 
         new(ReportView, "Reporting", "View reports", "Open dashboards and reports."),
         new(ReportExport, "Reporting", "Export reports", "Export report output to file."),
