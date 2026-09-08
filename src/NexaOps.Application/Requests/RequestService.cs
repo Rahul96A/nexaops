@@ -155,10 +155,12 @@ public sealed class RequestService : IRequestService
     }
 
     /// <inheritdoc />
-    public Task<IReadOnlyList<RequestCommentDto>> GetCommentsAsync(Guid id, CancellationToken ct = default)
+    public async Task<IReadOnlyList<RequestCommentDto>> GetCommentsAsync(Guid id, CancellationToken ct = default)
     {
         _currentUser.DemandPermission(Permissions.RequestRead);
-        return _queries.GetCommentsAsync(id, ct);
+
+        return await _queries.GetCommentsAsync(id, ct).ConfigureAwait(false)
+               ?? throw new EntityNotFoundException(EntityType, id);
     }
 
     /// <inheritdoc />
@@ -452,7 +454,12 @@ public sealed class RequestService : IRequestService
             _ => Permissions.RequestUpdate
         });
 
-        var request = await LoadAsync(id, ct).ConfigureAwait(false);
+        // Loaded with its lines, because completing the request asks whether every line has
+        // settled. Loading without them leaves the collection empty, and AllItemsSettled reports
+        // false for an empty request - so a fully delivered request could never be completed.
+        var request = await _requests.GetWithLinesAsync(id, ct).ConfigureAwait(false)
+                      ?? throw new EntityNotFoundException(EntityType, id);
+
         ApplyConcurrencyToken(request, command.RowVersion);
 
         var now = _clock.UtcNow;

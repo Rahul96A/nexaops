@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NexaOps.Application.Ai;
 using NexaOps.Application.Ai.Tools;
 using NexaOps.Application.Incidents;
+using NexaOps.Application.Requests;
 using NexaOps.Application.Sla;
 
 namespace NexaOps.Application;
@@ -16,6 +17,11 @@ public static class DependencyInjection
 
         // Use cases. Scoped, because they depend on the per-request tenant and user context.
         services.AddScoped<IIncidentService, IncidentService>();
+
+        // Service catalogue, requests and approvals.
+        services.AddScoped<IRequestService, RequestService>();
+        services.AddScoped<ICatalogService, CatalogService>();
+        services.AddScoped<IApprovalService, ApprovalService>();
         services.AddScoped<ISlaService, SlaService>();
 
         // Validators are discovered by assembly scan so a new command validator is picked up

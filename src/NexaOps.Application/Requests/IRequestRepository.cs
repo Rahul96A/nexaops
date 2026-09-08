@@ -92,7 +92,12 @@ public interface IRequestQueryService
 
     Task<RequestDetailDto?> GetByNumberAsync(string number, CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<RequestCommentDto>> GetCommentsAsync(
+    /// <summary>
+    /// Correspondence on a request, or null when the caller cannot see the request at all -
+    /// which the service turns into a 404, matching how every other cross-tenant or invisible
+    /// record is reported.
+    /// </summary>
+    Task<IReadOnlyList<RequestCommentDto>?> GetCommentsAsync(
         Guid requestId,
         CancellationToken cancellationToken = default);
 

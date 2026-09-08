@@ -78,17 +78,16 @@ public sealed class DemoDataSeeder
                 },
                 cancellationToken).ConfigureAwait(false);
 
-            if (await _context.Incidents.AnyAsync(i => i.TenantId == primary.Id, cancellationToken)
-                    .ConfigureAwait(false))
-            {
-                _logger.LogInformation("Demo data already present; nothing to seed.");
-                return;
-            }
-
+            // Both tenants are provisioned on every start, and each seeding method decides for
+            // itself whether its demo data already exists.
+            //
+            // The gate used to sit here, around both calls, which meant an existing environment
+            // re-provisioned the primary tenant - refreshing its roles and permission grants -
+            // and then returned before the secondary tenant was touched at all. The two tenants
+            // drifted apart permanently as new permissions were added, and a tenant isolation
+            // check against the neighbour silently became a permission check instead.
             await SeedPrimaryTenantAsync(primary, cancellationToken).ConfigureAwait(false);
             await SeedSecondaryTenantAsync(cancellationToken).ConfigureAwait(false);
-
-            _logger.LogInformation("Demo environment seeded.");
         }
         catch (Exception ex)
         {
@@ -99,6 +98,15 @@ public sealed class DemoDataSeeder
 
     private async Task SeedPrimaryTenantAsync(Tenant tenant, CancellationToken cancellationToken)
     {
+        // Its own gate, matching the secondary tenant's, so provisioning stays idempotent while
+        // demo data is written exactly once.
+        if (await _context.Incidents.AnyAsync(i => i.TenantId == tenant.Id, cancellationToken)
+                .ConfigureAwait(false))
+        {
+            _logger.LogInformation("Demo data already present for {Tenant}; roles refreshed only.", tenant.Code);
+            return;
+        }
+
         var now = _clock.UtcNow;
 
         var organization = new Organization

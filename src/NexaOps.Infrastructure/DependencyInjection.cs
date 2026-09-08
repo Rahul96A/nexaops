@@ -13,6 +13,7 @@ using NexaOps.Application.Abstractions;
 using NexaOps.Application.Ai;
 using NexaOps.Application.Identity;
 using NexaOps.Application.Incidents;
+using NexaOps.Application.Requests;
 using NexaOps.Application.Notifications;
 using NexaOps.Application.Sla;
 using NexaOps.Domain.Identity;
@@ -117,6 +118,12 @@ public static class DependencyInjection
         services.AddScoped<SlaRepository>();
         services.AddScoped<ISlaRepository>(p => p.GetRequiredService<SlaRepository>());
         services.AddScoped<ISlaRepositoryScheduleAccessor>(p => p.GetRequiredService<SlaRepository>());
+
+        // Service catalogue, requests and approvals.
+        services.AddScoped<IRequestRepository, RequestRepository>();
+        services.AddScoped<ICatalogRepository, CatalogRepository>();
+        services.AddScoped<IApprovalRepository, ApprovalRepository>();
+        services.AddScoped<IRequestQueryService, RequestQueryService>();
 
         services.AddScoped<IIncidentQueryService, IncidentQueryService>();
         services.AddScoped<IServiceDeskReferenceRepository, ServiceDeskReferenceRepository>();
