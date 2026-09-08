@@ -1,7 +1,7 @@
 # NexaOps — Status
 
-**As of 7 September 2026.** Phase 1 (platform foundation) plus Incident Management plus a demo
-environment.
+**As of 8 September 2026.** Phase 1 (platform foundation), Incident Management, and Phase 2
+(Service Requests, Service Catalogue and Approvals), plus a demo environment.
 
 This document is written to be handed to someone who has to decide whether to rely on this. It
 lists what works, what does not, and what is deliberately absent — with the gaps in the same
@@ -13,18 +13,25 @@ detail as the achievements.
 
 | Gate | Result |
 |---|---|
-| `dotnet build NexaOps.slnx` | **0 warnings, 0 errors** |
-| `dotnet test NexaOps.slnx` | **220 passing** |
+| `dotnet build NexaOps.slnx -warnaserror` | **0 warnings, 0 errors** |
+| `dotnet test NexaOps.slnx` | **322 passing** |
 | `npm run typecheck` | Clean |
 | `npm run lint` | Clean |
 | `npm run test` | **38 passing** |
-| `npm run build` | Succeeds — ~264 KB gzipped, 4 chunks |
+| `npm run build` | Succeeds — ~274 KB gzipped, 4 chunks |
 | `az bicep build --file infra/bicep/main.bicep` | **0 warnings** |
 | NuGet audit (`NuGetAuditMode=all`, moderate) | No advisories |
 | `npm audit` | No advisories |
 | gitleaks (full history) | No secrets |
 
-258 tests total. Breakdown and strategy in [TESTING.md](TESTING.md).
+360 tests total (189 domain, 31 application, 102 integration, 38 front end). Breakdown and
+strategy in [TESTING.md](TESTING.md).
+
+> Two of these gates were previously reported as passing when they were not. `dotnet build`
+> reported zero warnings because the verification build was incremental and never recompiled the
+> test project; CI builds with `/warnaserror` and had five. And `npm ci` failed from a clean
+> clone because the lock file was out of sync, which local builds never exercised. Both are
+> fixed, and the build is now verified with `--no-incremental -warnaserror`.
 
 ---
 
@@ -48,6 +55,22 @@ detail as the achievements.
 | Health | Separate liveness and readiness |
 | Telemetry | Serilog + OpenTelemetry traces and metrics, 7 product metrics |
 
+### Service Requests, Catalogue and Approvals — complete
+
+- **Service catalogue** with per-item fields of nine types. Every submitted answer is validated
+  server-side against the item's own definition; an answer to a field the item does not define is
+  refused, so a crafted payload cannot write arbitrary keys onto a record. An item cannot be
+  published without a fulfilment group or a configured approver.
+- **Ordering** snapshots each line's name and price, so editing the catalogue later cannot rewrite
+  what somebody ordered or what an approver authorised on that basis.
+- **Approvals** are module-agnostic (`Module` + `RecordId`), so change management will reuse the
+  table and the stage arithmetic unchanged. Manager approval resolves to a person at submission
+  time rather than storing a rule that could go stale. Two items needing the same approver produce
+  one approval, not two. Holding `approval.act` is not sufficient to decide — the record itself
+  says who may, and a non-addressee gets 404 rather than 403.
+- **Fulfilment** per line, with the request completing only once every line has settled.
+- A requester may withdraw their own request without holding `request.cancel`.
+
 ### Incident Management — complete
 
 Full lifecycle: New → Assigned → In progress → Pending → Resolved → Closed, with Cancelled, and
@@ -65,15 +88,18 @@ only source of truth for what is legal.
 - Optimistic concurrency: a stale edit is refused, never silently overwritten.
 - Full activity timeline and per-record audit view.
 
-**API surface:** 12 incident endpoints, 5 auth, 7 reference data, 4 notification, 2 audit, 2 AI.
+**API surface:** 47 endpoints — 12 incident, 12 request, 6 catalogue, 2 approval, 5 auth,
+7 reference data, 4 notification, 2 audit, 2 AI, plus 2 health.
 
 ### Front end
 
 React 19 / TypeScript 5.9 / Vite 7 / MUI 7 / TanStack Query 5.
 
 Service desk dashboard, incident queue with URL-driven filters, incident record page with
-activity and audit tabs, new-incident form, My Work, audit browser, global search, notification
-bell, AI assistant panel, sign-in, change password. Light and dark themes.
+activity and audit tabs, new-incident form, My Work, service catalogue, a catalogue order form
+built from each item's own field definitions, request queue, request record page with lines and
+approvals, approvals queue, audit browser, global search, notification bell, AI assistant panel,
+sign-in, change password. Light and dark themes.
 
 ### Infrastructure
 
@@ -85,20 +111,28 @@ bundles, staged rollout behind a protected environment, smoke tests, and automat
 420 incidents across 2 tenants, 18 users, 6 groups, 5 offices, 30 realistic Indian-enterprise
 scenarios. Deterministic seed. Every figure computed by the real engine.
 
+**The catalogue is not seeded.** A fresh demo starts with no catalogue items, so requests cannot
+be demonstrated until some are created through the API.
+
 ---
 
 ## 3. Deliberately not built in this phase
 
 These appear in the navigation marked **"Later"** and are not clickable. Nothing pretends to work.
 
-Service requests, service catalogue, problem management, change management and CAB, knowledge
-base, CMDB, asset management, the visual workflow engine, reporting and dashboard builder,
-virtual agent, mobile apps, inbound email, third-party integrations.
+Problem management, change management and CAB, knowledge base, CMDB, asset management, the
+visual workflow engine, reporting and dashboard builder, settings, virtual agent, mobile apps,
+inbound email, third-party integrations.
 
-The foundation they will share — tenancy, identity, permissions, audit, SLA, notifications,
-attachments, number sequences, and a module-agnostic `RecordRelations` table — is built and
-tested. `Category` already carries a `Module` discriminator; the SLA engine is already
-module-agnostic. Adding a module is adding a module, not reworking the platform.
+The foundation they share — tenancy, identity, permissions, audit, notifications, attachments,
+number sequences, module-agnostic `RecordRelations`, and now module-agnostic approvals — is built
+and tested. `Category` carries a `Module` discriminator, and Phase 2 exercised all of it without
+reworking the platform.
+
+The one part that did **not** turn out to be module-agnostic was the SLA service. `SlaInstance`
+storage is addressed by `Module` + `RecordId`, but `ISlaService` is typed against `Incident`
+throughout, so requests currently attach no clock. Generalising it is the first task of the next
+phase.
 
 ---
 
@@ -114,6 +148,15 @@ Grouped by how much they should worry you.
 | **No private endpoints.** SQL, Storage and Service Bus are reachable over the public network, restricted by firewall and Entra auth | A customer requiring no public network path cannot deploy as-is |
 | **No SQL row-level security.** Isolation is enforced in the application | A direct database connection with sufficient privilege bypasses it |
 | **No penetration test and no certification** | Every control in [SECURITY.md](SECURITY.md) is implemented; none is independently assessed |
+
+### Functional gaps introduced by Phase 2
+
+| Limitation | Consequence |
+|---|---|
+| **Requests carry no SLA clock.** `SlaInstance` is addressed by `Module` + `RecordId` and the schema supports requests, but `ISlaService` is typed against `Incident` throughout | `HasBreachedSla` stays false and `NextSlaDueAt` null on every request. This corrects an overstatement in the Phase 1 report: the SLA *storage* was module-agnostic, the *service* was not |
+| **No catalogue editor in the UI** | Items are created, published and retired through the API only |
+| **No demo seed data for the catalogue** | A fresh demo starts with an empty catalogue; items must be created before requests can be raised |
+| **Approval stages are single-stage in practice** | The model supports ordered stages and the arithmetic is tested, but nothing configures more than one |
 
 ### Blocks a customer with regulatory obligations
 
@@ -200,7 +243,7 @@ detail in [SECURITY.md §7](SECURITY.md) and [TESTING.md §9](TESTING.md).
 
 ## 7. Next implementation phase
 
-**Recommended: Service Request Management and the Service Catalogue.**
+**Recommended: generalise `ISlaService` so requests get SLA clocks, then Problem Management.**
 
 Why this and not something else:
 

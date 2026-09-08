@@ -10,8 +10,9 @@ material from, any commercial ITSM vendor.
 
 ## What is built
 
-This repository contains **Phase 1 (platform foundation) plus a complete Incident Management
-module and a demo environment.** Everything listed below is implemented, tested, and runs.
+This repository contains **Phase 1 (platform foundation), Incident Management, Service Request
+Management with a service catalogue and approvals, and a demo environment.** Everything listed
+below is implemented, tested, and runs.
 
 | Capability | State |
 |---|---|
@@ -20,6 +21,9 @@ module and a demo environment.** Everything listed below is implemented, tested,
 | Permission-based authorization, 12 seeded roles | Built, 14 tests |
 | Append-only audit trail | Built |
 | Incident management, full lifecycle | Built, 23 integration tests |
+| Service catalogue with server-validated fields | Built |
+| Service requests, full lifecycle | Built, 18 integration tests |
+| Approvals, module-agnostic | Built, 8 isolation tests |
 | SLA engine with Indian business calendars | Built, 32 tests |
 | Notifications (in-app + email dispatch) | Built |
 | Service desk dashboard, incident queue, record pages | Built |
@@ -28,9 +32,13 @@ module and a demo environment.** Everything listed below is implemented, tested,
 | CI/CD pipelines | Built |
 | Demo environment, 420 incidents across 2 tenants | Built |
 
-Modules that ship in later phases — requests, problems, changes, knowledge, service catalog,
-CMDB, assets, the workflow engine and reporting — appear in the navigation marked **"Later"**
-and are deliberately not clickable. Nothing in this product pretends to work.
+Modules that ship in later phases — problems, changes, knowledge, CMDB, assets, the workflow
+engine, reporting and settings — appear in the navigation marked **"Later"** and are deliberately
+not clickable. Nothing in this product pretends to work.
+
+> **Requests do not yet carry an SLA clock.** The schema and the `SlaInstance` table support it,
+> but `ISlaService` is still typed against `Incident`, so no clock is attached rather than
+> showing figures no clock produced. See [STATUS.md](docs/STATUS.md).
 
 **[See the full status report, including known limitations →](docs/STATUS.md)**
 
@@ -122,9 +130,9 @@ src/
   NexaOps.Api/             HTTP surface, auth wiring, middleware, workers, seeding.
   NexaOps.Web/             React 19 + TypeScript + Vite + MUI front end.
 tests/
-  NexaOps.Domain.Tests/         113 tests. Pure domain rules.
+  NexaOps.Domain.Tests/         189 tests. Pure domain rules.
   NexaOps.Application.Tests/    31 tests. Use-case orchestration and the permission catalogue.
-  NexaOps.Api.IntegrationTests/ 76 tests. Real HTTP against real SQL Server.
+  NexaOps.Api.IntegrationTests/ 102 tests. Real HTTP against real SQL Server.
 infra/
   bicep/                   Azure infrastructure, four environments.
   scripts/                 Local development helpers.
@@ -158,12 +166,12 @@ docs/                      Architecture, security, operations, demo scripts.
 Every one of these passes on the current tree:
 
 ```bash
-dotnet build NexaOps.slnx                # 0 warnings, 0 errors
-dotnet test NexaOps.slnx                 # 220 tests
+dotnet build NexaOps.slnx -warnaserror   # 0 warnings, 0 errors
+dotnet test NexaOps.slnx                 # 322 tests
 cd src/NexaOps.Web && npm run typecheck   # clean
 cd src/NexaOps.Web && npm run lint        # clean
 cd src/NexaOps.Web && npm run test        # 38 tests
-cd src/NexaOps.Web && npm run build       # 264 KB gzipped
+cd src/NexaOps.Web && npm run build       # 274 KB gzipped
 az bicep build --file infra/bicep/main.bicep   # 0 warnings
 ```
 
