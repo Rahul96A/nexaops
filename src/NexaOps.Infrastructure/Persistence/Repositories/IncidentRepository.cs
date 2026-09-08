@@ -197,6 +197,18 @@ public sealed class ServiceDeskReferenceRepository : IServiceDeskReferenceReposi
     }
 
     /// <inheritdoc />
+    public async Task<Guid?> GetManagerIdAsync(Guid userId, CancellationToken cancellationToken = default)
+        // Tenant-filtered like every other read here, so a manager recorded across a tenant
+        // boundary - which the write guard would not allow in the first place - reads as absent
+        // rather than resolving to somebody else's directory.
+        => await _context.Users
+            .AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => u.ManagerId)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+    /// <inheritdoc />
     public void AddNotification(Notification notification) => _context.Notifications.Add(notification);
 }
 

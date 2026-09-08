@@ -157,6 +157,12 @@ public interface IServiceDeskReferenceRepository
     /// <summary>The tenant priority matrix, cached because it changes rarely and is read constantly.</summary>
     Task<IReadOnlyList<PriorityMatrixEntry>> GetPriorityMatrixAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// The user's line manager, or null when none is recorded. Used to resolve manager approval
+    /// at the moment a request is submitted rather than storing a rule that could go stale.
+    /// </summary>
+    Task<Guid?> GetManagerIdAsync(Guid userId, CancellationToken cancellationToken = default);
+
     /// <summary>Organization and department of a user, used to stamp an incident at creation.</summary>
     Task<(Guid? OrganizationId, Guid? DepartmentId)> GetUserPlacementAsync(
         Guid userId,

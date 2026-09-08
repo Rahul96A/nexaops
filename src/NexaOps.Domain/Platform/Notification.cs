@@ -45,7 +45,15 @@ public enum NotificationKind
     ApprovalDecided = 11,
     ChangeScheduled = 12,
     Mention = 13,
-    SystemAnnouncement = 14
+    SystemAnnouncement = 14,
+
+    // Service request management.
+    RequestSubmitted = 15,
+    RequestAssigned = 16,
+    RequestCommented = 17,
+    RequestFulfilled = 18,
+    RequestRejected = 19,
+    RequestCancelled = 20
 }
 
 public enum NotificationSeverity
