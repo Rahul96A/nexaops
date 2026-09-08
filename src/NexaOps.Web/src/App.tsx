@@ -25,6 +25,10 @@ import { ChangeListPage } from '@/features/changes/ChangeListPage';
 import { ChangeDetailPage } from '@/features/changes/ChangeDetailPage';
 import { KnowledgePage } from '@/features/knowledge/KnowledgePage';
 import { ArticleDetailPage } from '@/features/knowledge/ArticleDetailPage';
+import { CmdbPage } from '@/features/cmdb/CmdbPage';
+import { CiDetailPage } from '@/features/cmdb/CiDetailPage';
+import { AssetsPage } from '@/features/assets/AssetsPage';
+import { AssetDetailPage } from '@/features/assets/AssetDetailPage';
 import { AuditPage } from '@/features/audit/AuditPage';
 import { NotFoundPage } from '@/features/NotFoundPage';
 
@@ -192,6 +196,42 @@ export function App() {
             element={
               <RequireAuth permission={Permissions.knowledgeRead}>
                 <ArticleDetailPage />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="cmdb"
+            element={
+              <RequireAuth permission={Permissions.cmdbRead}>
+                <CmdbPage />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="cmdb/:id"
+            element={
+              <RequireAuth permission={Permissions.cmdbRead}>
+                <CiDetailPage />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="assets"
+            element={
+              <RequireAuth permission={Permissions.assetRead}>
+                <AssetsPage />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="assets/:id"
+            element={
+              <RequireAuth permission={Permissions.assetRead}>
+                <AssetDetailPage />
               </RequireAuth>
             }
           />

@@ -1042,3 +1042,184 @@ export interface ArticleSearchParams {
   page?: number;
   pageSize?: number;
 }
+
+// ---------------------------------------------------------------------------
+// CMDB
+// ---------------------------------------------------------------------------
+
+export type CiType =
+  | 'Server' | 'VirtualMachine' | 'NetworkDevice' | 'StorageDevice'
+  | 'Database' | 'Application' | 'Middleware'
+  | 'BusinessService' | 'TechnicalService'
+  | 'Workstation' | 'MobileDevice' | 'Printer'
+  | 'SoftwareLicence' | 'CloudResource';
+
+export type CiStatus = 'Planned' | 'Operational' | 'Impaired' | 'Retired' | 'Disposed';
+
+export type CiCriticality = 'Low' | 'Medium' | 'High' | 'Critical';
+
+export type CiRelationshipType =
+  | 'DependsOn' | 'Contains' | 'RunsOn' | 'ConnectsTo' | 'FailsOverTo';
+
+export interface CiSummary {
+  id: string;
+  number: string;
+  name: string;
+  type: CiType;
+  status: CiStatus;
+  criticality: CiCriticality;
+  environment?: string | null;
+  location?: string | null;
+  ownerUserId?: string | null;
+  ownerName?: string | null;
+  supportGroupId?: string | null;
+  supportGroupName?: string | null;
+  supportExpiresOn?: string | null;
+  isOutOfSupport: boolean;
+  createdAt: string;
+}
+
+export interface RelatedItem {
+  id: string;
+  number: string;
+  name: string;
+  type: CiType;
+  status: CiStatus;
+  criticality: CiCriticality;
+  relationship: CiRelationshipType;
+  /** Hops from the item. 1 is a direct neighbour. */
+  depth: number;
+}
+
+export interface CiDetail {
+  id: string;
+  number: string;
+  name: string;
+  description?: string | null;
+  type: CiType;
+  status: CiStatus;
+  criticality: CiCriticality;
+  location?: string | null;
+  serialNumber?: string | null;
+  manufacturer?: string | null;
+  model?: string | null;
+  version?: string | null;
+  environment?: string | null;
+  ownerUserId?: string | null;
+  ownerName?: string | null;
+  supportGroupId?: string | null;
+  supportGroupName?: string | null;
+  acquiredOn?: string | null;
+  supportExpiresOn?: string | null;
+  isOutOfSupport: boolean;
+  vendor?: string | null;
+  createdAt: string;
+  impacts: RelatedItem[];
+  dependsOn: RelatedItem[];
+  openIncidentCount: number;
+  rowVersion?: string | null;
+}
+
+export interface CmdbSummaryCounts {
+  totalItems: number;
+  operational: number;
+  impaired: number;
+  criticalItems: number;
+  outOfSupport: number;
+  unowned: number;
+  byType: { type: CiType; count: number }[];
+}
+
+// ---------------------------------------------------------------------------
+// Assets
+// ---------------------------------------------------------------------------
+
+export type AssetKind = 'Hardware' | 'Software' | 'Peripheral' | 'Mobile' | 'Consumable';
+
+export type AssetStatus =
+  | 'OnOrder' | 'InStock' | 'Assigned' | 'InRepair' | 'Retired' | 'Disposed' | 'Lost';
+
+export type LicenceModel = 'PerUser' | 'PerDevice' | 'Concurrent' | 'SiteLicence';
+
+export type ComplianceState = 'UnderUsed' | 'Compliant' | 'OverDeployed' | 'Expired';
+
+export interface AssetSummary {
+  id: string;
+  number: string;
+  assetTag: string;
+  name: string;
+  kind: AssetKind;
+  status: AssetStatus;
+  manufacturer?: string | null;
+  model?: string | null;
+  serialNumber?: string | null;
+  assignedToUserId?: string | null;
+  assignedToName?: string | null;
+  location?: string | null;
+  warrantyExpiresOn?: string | null;
+  isOutOfWarranty: boolean;
+  refreshDueOn?: string | null;
+  isDueForRefresh: boolean;
+  purchaseCost?: number | null;
+  createdAt: string;
+}
+
+export interface AssetCustody {
+  id: string;
+  userId: string;
+  userName: string;
+  assignedAt: string;
+  returnedAt?: string | null;
+  assignmentNote?: string | null;
+  returnNote?: string | null;
+}
+
+export interface AssetDetail extends AssetSummary {
+  assignedAt?: string | null;
+  purchasedOn?: string | null;
+  vendor?: string | null;
+  purchaseOrderNumber?: string | null;
+  usefulLifeMonths?: number | null;
+  configurationItemId?: string | null;
+  configurationItemName?: string | null;
+  disposedOn?: string | null;
+  disposalNotes?: string | null;
+  custodyHistory: AssetCustody[];
+  rowVersion?: string | null;
+}
+
+export interface LicenceSummary {
+  id: string;
+  number: string;
+  productName: string;
+  publisher?: string | null;
+  version?: string | null;
+  model: LicenceModel;
+  entitlementCount: number;
+  deployedCount: number;
+  availableEntitlements?: number | null;
+  overDeployedBy: number;
+  compliance: ComplianceState;
+  expiresOn?: string | null;
+  annualCost?: number | null;
+  vendor?: string | null;
+  agreementReference?: string | null;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface AssetSummaryCounts {
+  totalAssets: number;
+  inStock: number;
+  assigned: number;
+  inRepair: number;
+  dueForRefresh: number;
+  outOfWarranty: number;
+  totalPurchaseCost?: number | null;
+  licences: number;
+  overDeployedLicences: number;
+  expiredLicences: number;
+  overDeployedSeats: number;
+  /** Indicative only — real remediation is negotiated, not arithmetic. */
+  exposureCost?: number | null;
+}

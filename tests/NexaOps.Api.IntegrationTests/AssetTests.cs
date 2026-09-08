@@ -124,6 +124,57 @@ public sealed class AssetTests
         problem!.Code.ShouldBe("asset.not_assigned");
     }
 
+    [Theory]
+    [InlineData(AssetStatus.Disposed)]
+    [InlineData(AssetStatus.Retired)]
+    public async Task A_return_cannot_be_used_to_end_an_assets_life(AssetStatus returnTo)
+    {
+        // The return endpoint takes the destination status from the caller and is held behind
+        // asset.assign, which a service desk manager has. Disposal is held behind asset.dispose,
+        // which they do not. Without a constraint on the destination, handing an asset back would
+        // be a way around that split — and would leave a disposed asset with no disposal date,
+        // which is precisely the record finance cannot explain.
+        var manager = await _env.ClientForAsync(_env.Acme.Manager);
+
+        var asset = await CreateAsync(manager, $"EL-{Guid.NewGuid():N}"[..12]);
+        await AssignAsync(manager, asset.Id, _env.Acme.Agent.Id, null);
+
+        var response = await manager.PostAsJsonAsync($"/api/v1/assets/{asset.Id}/return",
+            new ReturnAssetCommand { ReturnTo = returnTo });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetailsResponse>(TestEnvironment.Json);
+        problem!.Code.ShouldBe("asset.invalid_return_state");
+
+        // And the custody record is untouched: a refused return leaves the holder holding it.
+        var unchanged = await manager.GetFromJsonAsync<AssetDetailDto>(
+            $"/api/v1/assets/{asset.Id}", TestEnvironment.Json);
+
+        unchanged!.Status.ShouldBe(AssetStatus.Assigned);
+        unchanged.AssignedToUserId.ShouldBe(_env.Acme.Agent.Id);
+    }
+
+    [Fact]
+    public async Task An_asset_that_never_came_back_can_be_recorded_as_unaccounted_for()
+    {
+        // Distinct from disposal on purpose: a device nobody can find is a security question, and
+        // pretending it was disposed of would answer the wrong one.
+        var manager = await _env.ClientForAsync(_env.Acme.Manager);
+
+        var asset = await CreateAsync(manager, $"LS-{Guid.NewGuid():N}"[..12]);
+        await AssignAsync(manager, asset.Id, _env.Acme.Agent.Id, null);
+
+        var response = await manager.PostAsJsonAsync($"/api/v1/assets/{asset.Id}/return",
+            new ReturnAssetCommand { Note = "Not handed back at exit.", ReturnTo = AssetStatus.Lost });
+
+        response.EnsureSuccessStatusCode();
+
+        var returned = await response.Content.ReadFromJsonAsync<AssetDetailDto>(TestEnvironment.Json);
+        returned!.Status.ShouldBe(AssetStatus.Lost);
+        returned.CustodyHistory.ShouldAllBe(h => h.ReturnedAt != null);
+    }
+
     [Fact]
     public async Task A_service_desk_manager_can_issue_kit_but_not_dispose_of_it()
     {

@@ -206,6 +206,19 @@ public sealed class AssetService : IAssetService
 
         var asset = await LoadWithHistoryAsync(id, ct).ConfigureAwait(false);
 
+        // A handback lands the asset back in the register, in stock, in repair, or written off as
+        // unaccounted for. It may not land on Retired or Disposed: those end the asset's working
+        // life, are held behind a narrower permission, and stamp a date that a return does not.
+        // Without this the return endpoint would be a way around asset.dispose, and would leave a
+        // disposed asset with no disposal date for finance to explain.
+        if (command.ReturnTo is not (AssetStatus.InStock or AssetStatus.InRepair or AssetStatus.Lost))
+        {
+            throw new DomainException(
+                "asset.invalid_return_state",
+                "An asset can be returned to stock, sent for repair, or recorded as unaccounted for. "
+                + "Retiring or disposing of it is a separate action.");
+        }
+
         asset.Return(_clock.UtcNow, command.Note, command.ReturnTo);
 
         _audit.Record(

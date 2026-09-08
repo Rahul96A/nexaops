@@ -72,6 +72,20 @@ export const Permissions = {
   knowledgeRetire: 'knowledge.retire',
   knowledgeFeedback: 'knowledge.feedback',
 
+  cmdbRead: 'cmdb.read',
+  cmdbCreate: 'cmdb.create',
+  cmdbUpdate: 'cmdb.update',
+  cmdbManageRelationships: 'cmdb.manage_relationships',
+  cmdbRetire: 'cmdb.retire',
+
+  assetRead: 'asset.read',
+  assetCreate: 'asset.create',
+  assetUpdate: 'asset.update',
+  assetAssign: 'asset.assign',
+  assetDispose: 'asset.dispose',
+  licenceRead: 'licence.read',
+  licenceManage: 'licence.manage',
+
   approvalAct: 'approval.act',
   approvalReadAll: 'approval.read.all',
 

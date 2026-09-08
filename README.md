@@ -26,8 +26,8 @@ below is implemented, tested, and runs.
 | Problem management, known errors | Built, 12 integration tests |
 | Change management, CAB, PIR | Built, 14 integration tests |
 | Knowledge base, review lifecycle | Built, 13 integration tests |
-| CMDB with impact analysis | Built (API only), 12 integration tests |
-| Asset register, custody, licence compliance | Built (API only), 17 integration tests |
+| CMDB with impact analysis, dependency pages | Built, 12 integration tests |
+| Asset register, custody trail, licence compliance | Built, 20 integration tests |
 | Approvals, module-agnostic | Built, 8 isolation tests |
 | SLA engine with Indian business calendars, incidents and requests | Built, 32 tests |
 | Notifications (in-app + email dispatch) | Built |
@@ -168,7 +168,7 @@ Every one of these passes on the current tree:
 
 ```bash
 dotnet build NexaOps.slnx -warnaserror   # 0 warnings, 0 errors
-dotnet test NexaOps.slnx                 # 512 tests
+dotnet test NexaOps.slnx                 # 515 tests
 cd src/NexaOps.Web && npm run typecheck   # clean
 cd src/NexaOps.Web && npm run lint        # clean
 cd src/NexaOps.Web && npm run test        # 38 tests

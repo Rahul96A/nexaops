@@ -16,7 +16,7 @@ detail as the achievements.
 | Gate | Result |
 |---|---|
 | `dotnet build NexaOps.slnx -warnaserror` | **0 warnings, 0 errors** |
-| `dotnet test NexaOps.slnx` | **512 passing** |
+| `dotnet test NexaOps.slnx` | **515 passing** |
 | `npm run typecheck` | Clean |
 | `npm run lint` | Clean |
 | `npm run test` | **38 passing** |
@@ -26,7 +26,7 @@ detail as the achievements.
 | `npm audit` | No advisories |
 | gitleaks (full history) | No secrets |
 
-550 tests total (308 domain, 31 application, 173 integration, 38 front end). Breakdown and
+553 tests total (308 domain, 31 application, 176 integration, 38 front end). Breakdown and
 strategy in [TESTING.md](TESTING.md).
 
 > Two of these gates were previously reported as passing when they were not. `dotnet build`
@@ -96,11 +96,20 @@ strategy in [TESTING.md](TESTING.md).
 - Assets and configuration items are **linked, not merged**. A CI answers what a thing supports;
   an asset answers who has it and what it cost. Merging produces a record that serves neither.
 
-**Not built:** an asset user interface, and any automatic discovery of software installations.
-`DeployedCount` is maintained by whoever knows — an inventory feed or a person. NexaOps does not
-discover installations itself, and the compliance position is only as good as that number.
+- **A handback cannot end an asset's life.** The return endpoint takes its destination status
+  from the caller and sits behind `asset.assign`, which a service desk manager holds; disposal
+  sits behind `asset.dispose`, which they do not. Returns are constrained to stock, repair, or
+  unaccounted-for, so handing a laptop back is not a route around that split — and cannot leave a
+  disposed asset with no disposal date for finance to explain.
+- **Unaccounted-for is distinct from disposed**, and coloured as a problem in the UI. A device
+  nobody can find is a security question; recording it as disposal answers the wrong one.
 
-### CMDB — complete (API and tests; no UI yet)
+**Not built:** any automatic discovery of software installations. `DeployedCount` is maintained
+by whoever knows — an inventory feed or a person. NexaOps does not discover installations itself,
+and the compliance position is only as good as that number. Assets are created and disposed of
+through the API; the UI covers the register, custody and the licence position.
+
+### CMDB — complete
 
 - **Impact analysis is pure graph arithmetic**, testable without a database and identical
   whether called from a change's impact assessment or a CI record page. It answers both
@@ -120,8 +129,13 @@ discover installations itself, and the compliance position is only as good as th
 - The graph cannot be made to span a tenant boundary: the target look-up is tenant-filtered, so
   a neighbour's item reads as non-existent.
 
-**Not built:** a CMDB user interface. Items and relationships are managed through the API, and
-CMDB stays marked "Later" in the navigation until the pages exist.
+- The record page shows impact and dependency as **two separate lists rather than one merged
+  graph**, because they answer different questions during an outage: who to warn, and what to
+  check first. Depth is shown, because a directly affected item is somebody's immediate problem
+  and one four hops away is a heads-up.
+
+**Not built:** item and relationship editing in the UI. Both are managed through the API; the
+pages read the register and the graph.
 
 ### Knowledge Base — complete
 
@@ -349,31 +363,38 @@ detail in [SECURITY.md §7](SECURITY.md) and [TESTING.md §9](TESTING.md).
 | `GroupBy` with a key reaching through a navigation | 500 on the dashboard workload panel |
 | Invalid sort field returned 409 | Wrong status; now 400 with field errors |
 | Audit row volume during seeding | Command timeouts. Fixed with batching and an audit-suppression scope |
+| Asset return took its destination status from the caller, unconstrained | A service desk manager holding only `asset.assign` could return an asset straight to Disposed — around the narrower `asset.dispose` permission, and with no disposal date recorded |
 
 ---
 
 ## 7. Next implementation phase
 
-**Recommended: user interfaces for CMDB and Assets, then the workflow engine.**
+**Recommended: the workflow engine, then reporting.**
 
-Why this and not something else:
+Seven modules now exist — incidents, requests and the catalogue, problems, changes, knowledge,
+CMDB and assets. That is the condition the workflow engine was deliberately waiting on: it is the
+most valuable long-term capability and the easiest to build prematurely, and it should be
+designed against seven real lifecycles rather than one imagined one. The orchestration each
+module actually asked for — approval routing, fulfilment hand-offs, CAB gates, review reminders,
+refresh and expiry dates that need to become work — is now observable rather than guessed at.
 
-- It reuses the entire foundation — tenancy, permissions, audit, SLA, notifications, number
-  sequences, categories with a `Module` discriminator — and adds a genuinely new shape:
-  catalogue items with variables, and approvals. That is the right second module because it
-  proves the foundation is a foundation rather than incident-management scaffolding.
-- Approvals are a prerequisite for change management, so building them here is not a detour.
-- It is the highest-volume module in most Indian SMB and mid-market deployments. Requests
-  outnumber incidents several times over.
+Reporting follows it, because a workflow nobody can measure is a workflow nobody trusts.
 
-Before or alongside it, three items should be treated as prerequisites rather than backlog:
+Still to build, in the order they earn their place:
+
+1. **Workflow engine** — a designer, a runtime, and triggers on the records above.
+2. **Reporting and dashboards** beyond the service desk view.
+3. **Settings and administration UI.** Categories, groups, roles, SLA definitions and calendars
+   are all API-only today; a customer cannot configure their own tenant without a developer.
+4. **Virtual agent** on the existing grounded AI abstraction.
+5. **Integration surface** — inbound email, a mobile client, third-party connectors.
+
+Before or alongside them, four items should be treated as prerequisites rather than backlog:
 
 1. **Malware scanning on attachments.** The product cannot responsibly accept files from
    untrusted users without it.
-2. **Retention enforcement and a data export path.** The first customer with a DPDP question will
-   ask for both.
-3. **An E2E browser suite.** Manual verification does not survive a second module.
-
-**Not recommended next:** the workflow engine. It is the most valuable long-term capability and
-the easiest to build prematurely. It should be built after two or three modules exist, so it is
-designed against real orchestration needs rather than imagined ones.
+2. **Retention enforcement and a data export path.** Retention is stored and not acted on. The
+   first customer with a DPDP question will ask for both, plus a subject-erasure workflow.
+3. **An E2E browser suite.** Seven modules of UI are past what manual verification covers.
+4. **A `LICENSE` file.** The repository is public and the README asserts all rights reserved,
+   which is a statement without a licence file behind it.

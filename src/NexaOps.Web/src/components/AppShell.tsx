@@ -31,6 +31,8 @@ import HowToRegOutlinedIcon from '@mui/icons-material/HowToRegOutlined';
 import ConfirmationNumberOutlinedIcon from '@mui/icons-material/ConfirmationNumberOutlined';
 import AssignmentIndOutlinedIcon from '@mui/icons-material/AssignmentIndOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
+import HubOutlinedIcon from '@mui/icons-material/HubOutlined';
+import DevicesOtherOutlinedIcon from '@mui/icons-material/DevicesOtherOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
@@ -124,8 +126,18 @@ const NAVIGATION: NavSection[] = [
   {
     heading: 'Assets and configuration',
     items: [
-      { label: 'CMDB', to: '/cmdb', icon: <ConfirmationNumberOutlinedIcon />, comingSoon: true },
-      { label: 'Assets', to: '/assets', icon: <ConfirmationNumberOutlinedIcon />, comingSoon: true },
+      {
+        label: 'Configuration items',
+        to: '/cmdb',
+        icon: <HubOutlinedIcon />,
+        permission: Permissions.cmdbRead,
+      },
+      {
+        label: 'Assets',
+        to: '/assets',
+        icon: <DevicesOtherOutlinedIcon />,
+        permission: Permissions.assetRead,
+      },
     ],
   },
   {
