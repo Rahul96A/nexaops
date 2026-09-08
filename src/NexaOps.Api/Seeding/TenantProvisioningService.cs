@@ -93,6 +93,7 @@ public sealed class TenantProvisioningService
         await ProvisionRolesAsync(tenant.Id, cancellationToken).ConfigureAwait(false);
         await ProvisionPriorityMatrixAsync(tenant.Id, cancellationToken).ConfigureAwait(false);
         await ProvisionNumberSequencesAsync(tenant.Id, cancellationToken).ConfigureAwait(false);
+        await ProvisionChangeAdvisoryBoardAsync(tenant.Id, cancellationToken).ConfigureAwait(false);
 
         var calendars = await ProvisionCalendarsAsync(tenant.Id, cancellationToken).ConfigureAwait(false);
         await ProvisionSlaAsync(tenant.Id, calendars, cancellationToken).ConfigureAwait(false);
@@ -220,6 +221,38 @@ public sealed class TenantProvisioningService
                 CreatedAt = _clock.UtcNow
             });
         }
+    }
+
+    /// <summary>
+    /// Creates the change advisory board as an approval group.
+    /// <para>
+    /// Resolved by well-known code rather than by a setting, so a tenant either has a board or
+    /// visibly does not. Membership is left empty deliberately: who sits on the board is a
+    /// customer decision, and inventing members would put people in an approval queue they never
+    /// agreed to be in.
+    /// </para>
+    /// </summary>
+    private async Task ProvisionChangeAdvisoryBoardAsync(Guid tenantId, CancellationToken cancellationToken)
+    {
+        var exists = await _context.Groups
+            .AnyAsync(g => g.TenantId == tenantId && g.Code == "CAB", cancellationToken)
+            .ConfigureAwait(false);
+
+        if (exists)
+        {
+            return;
+        }
+
+        _context.Groups.Add(new Group
+        {
+            TenantId = tenantId,
+            Code = "CAB",
+            Name = "Change Advisory Board",
+            Description = "Authorises normal changes. Add the people who sit on your board.",
+            Type = GroupType.Approval,
+            IsActive = true,
+            CreatedAt = _clock.UtcNow
+        });
     }
 
     /// <summary>

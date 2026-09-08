@@ -3,6 +3,7 @@ using NexaOps.Application.Abstractions;
 using NexaOps.Domain.Approvals;
 using NexaOps.Domain.Auditing;
 using NexaOps.Domain.Catalog;
+using NexaOps.Domain.Changes;
 using NexaOps.Domain.Common;
 using NexaOps.Domain.Identity;
 using NexaOps.Domain.Platform;
@@ -200,6 +201,10 @@ public class NexaOpsDbContext : DbContext
     // --- Problem management ---
     public DbSet<Problem> Problems => Set<Problem>();
     public DbSet<ProblemComment> ProblemComments => Set<ProblemComment>();
+
+    // --- Change management ---
+    public DbSet<Change> Changes => Set<Change>();
+    public DbSet<ChangeComment> ChangeComments => Set<ChangeComment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

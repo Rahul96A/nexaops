@@ -193,6 +193,18 @@ public sealed class ServiceDeskReferenceRepository : IServiceDeskReferenceReposi
         return (placement?.OrganizationId, placement?.DepartmentId);
     }
 
+    /// <summary>The well-known code for the change advisory board group.</summary>
+    public const string ChangeAdvisoryBoardCode = "CAB";
+
+    /// <inheritdoc />
+    public async Task<Guid?> GetChangeAdvisoryBoardIdAsync(CancellationToken cancellationToken = default)
+        => await _context.Groups
+            .AsNoTracking()
+            .Where(g => g.Code == ChangeAdvisoryBoardCode && g.IsActive && !g.IsArchived)
+            .Select(g => (Guid?)g.Id)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
     /// <inheritdoc />
     public async Task<Guid?> GetManagerIdAsync(Guid userId, CancellationToken cancellationToken = default)
         // Tenant-filtered like every other read here, so a manager recorded across a tenant

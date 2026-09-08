@@ -156,6 +156,16 @@ public interface IServiceDeskReferenceRepository
     Task<IReadOnlyList<PriorityMatrixEntry>> GetPriorityMatrixAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// The tenant's change advisory board, or null when none is configured.
+    /// <para>
+    /// Resolved by well-known group code rather than by a setting, so a tenant that has not set
+    /// one up simply has no board and the change service says so, rather than reading a
+    /// dangling identifier out of configuration.
+    /// </para>
+    /// </summary>
+    Task<Guid?> GetChangeAdvisoryBoardIdAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// The user's line manager, or null when none is recorded. Used to resolve manager approval
     /// at the moment a request is submitted rather than storing a rule that could go stale.
     /// </summary>

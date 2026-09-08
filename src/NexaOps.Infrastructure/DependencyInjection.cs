@@ -12,6 +12,7 @@ using Microsoft.Extensions.Logging;
 using NexaOps.Application.Abstractions;
 using NexaOps.Application.Ai;
 using NexaOps.Application.Identity;
+using NexaOps.Application.Changes;
 using NexaOps.Application.Incidents;
 using NexaOps.Application.Problems;
 using NexaOps.Application.Requests;
@@ -129,6 +130,10 @@ public static class DependencyInjection
         // Problem management.
         services.AddScoped<IProblemRepository, ProblemRepository>();
         services.AddScoped<IProblemQueryService, ProblemQueryService>();
+
+        // Change management.
+        services.AddScoped<IChangeRepository, ChangeRepository>();
+        services.AddScoped<IChangeQueryService, ChangeQueryService>();
 
         services.AddScoped<IIncidentQueryService, IncidentQueryService>();
         services.AddScoped<IServiceDeskReferenceRepository, ServiceDeskReferenceRepository>();

@@ -184,6 +184,42 @@ public static class Permissions
     public const string ProblemLinkIncident = "problem.link_incident";
 
     // ---------------------------------------------------------------
+    // Change
+    // ---------------------------------------------------------------
+
+    /// <summary>
+    /// Read changes and the change calendar. Every authenticated user holds this: knowing what
+    /// is being changed to the services you depend on is not privileged information.
+    /// </summary>
+    public const string ChangeRead = "change.read";
+
+    public const string ChangeCreate = "change.create";
+    public const string ChangeUpdate = "change.update";
+    public const string ChangeAssign = "change.assign";
+
+    /// <summary>Book or move a change window.</summary>
+    public const string ChangeSchedule = "change.schedule";
+
+    /// <summary>Start and finish implementation.</summary>
+    public const string ChangeImplement = "change.implement";
+
+    /// <summary>Record the post-implementation review and outcome.</summary>
+    public const string ChangeReview = "change.review";
+
+    public const string ChangeClose = "change.close";
+    public const string ChangeCancel = "change.cancel";
+    public const string ChangeCommentCreate = "change.comment.create";
+
+    /// <summary>See internal implementation notes.</summary>
+    public const string ChangeWorkNoteRead = "change.worknote.read";
+
+    /// <summary>
+    /// Raise an emergency change, which proceeds without prior approval. Deliberately separate
+    /// and narrowly held: it is the control that stops the emergency path becoming the normal one.
+    /// </summary>
+    public const string ChangeRaiseEmergency = "change.raise_emergency";
+
+    // ---------------------------------------------------------------
     // Reporting
     // ---------------------------------------------------------------
 
@@ -285,6 +321,19 @@ public static class Permissions
         new(ProblemCommentCreate, "Problem", "Add problem comments", "Add comments and investigation notes."),
         new(ProblemWorkNoteRead, "Problem", "View problem work notes", "Read internal investigation notes."),
         new(ProblemLinkIncident, "Problem", "Link incidents", "Link and unlink incidents to a problem."),
+
+        new(ChangeRead, "Change", "View changes", "Read changes and the change calendar."),
+        new(ChangeCreate, "Change", "Raise changes", "Create standard and normal changes."),
+        new(ChangeUpdate, "Change", "Edit changes", "Change fields, plans and risk assessment."),
+        new(ChangeAssign, "Change", "Assign changes", "Set the implementation group and assignee."),
+        new(ChangeSchedule, "Change", "Schedule changes", "Book and move change windows."),
+        new(ChangeImplement, "Change", "Implement changes", "Start and finish implementation."),
+        new(ChangeReview, "Change", "Review changes", "Record the post-implementation review and outcome."),
+        new(ChangeClose, "Change", "Close changes", "Close a reviewed change."),
+        new(ChangeCancel, "Change", "Cancel changes", "Cancel a change that will not proceed."),
+        new(ChangeCommentCreate, "Change", "Add change comments", "Add comments and implementation notes."),
+        new(ChangeWorkNoteRead, "Change", "View change work notes", "Read internal implementation notes."),
+        new(ChangeRaiseEmergency, "Change", "Raise emergency changes", "Raise a change that proceeds without prior approval."),
 
         new(ReportView, "Reporting", "View reports", "Open dashboards and reports."),
         new(ReportExport, "Reporting", "Export reports", "Export report output to file."),

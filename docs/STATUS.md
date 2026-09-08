@@ -1,8 +1,8 @@
 # NexaOps — Status
 
 **As of 8 September 2026.** Phase 1 (platform foundation), Incident Management, Phase 2
-(Service Requests, Service Catalogue and Approvals) and Phase 3 (Problem Management), plus a
-demo environment.
+(Service Requests, Service Catalogue and Approvals) Phase 3 (Problem Management) and Phase 4
+(Change Management and the CAB), plus a demo environment.
 
 This document is written to be handed to someone who has to decide whether to rely on this. It
 lists what works, what does not, and what is deliberately absent — with the gaps in the same
@@ -15,7 +15,7 @@ detail as the achievements.
 | Gate | Result |
 |---|---|
 | `dotnet build NexaOps.slnx -warnaserror` | **0 warnings, 0 errors** |
-| `dotnet test NexaOps.slnx` | **363 passing** |
+| `dotnet test NexaOps.slnx` | **405 passing** |
 | `npm run typecheck` | Clean |
 | `npm run lint` | Clean |
 | `npm run test` | **38 passing** |
@@ -25,7 +25,7 @@ detail as the achievements.
 | `npm audit` | No advisories |
 | gitleaks (full history) | No secrets |
 
-401 tests total (215 domain, 31 application, 117 integration, 38 front end). Breakdown and
+443 tests total (243 domain, 31 application, 131 integration, 38 front end). Breakdown and
 strategy in [TESTING.md](TESTING.md).
 
 > Two of these gates were previously reported as passing when they were not. `dotnet build`
@@ -75,6 +75,24 @@ strategy in [TESTING.md](TESTING.md).
   abandons its clock rather than breaching it. Targets are working days — one, two, three, five
   and ten — because that is how delivery is actually promised.
 - A requester may withdraw their own request without holding `request.cancel`.
+
+### Change Management and the CAB — complete
+
+- **Three change types that genuinely differ.** A standard change proceeds on a procedure that
+  was approved once; a normal change goes to the advisory board; an emergency change proceeds now
+  and is reviewed afterwards. Treating all three alike is how an unofficial process grows up
+  beside the official one.
+- **Raising an emergency change needs its own permission.** That is the control that stops the
+  emergency path becoming the normal one, and the emergency rate is on the dashboard because a
+  rising count means the normal process is failing people.
+- **Review cannot be skipped.** There is no transition from Implementing to Closed, and a change
+  cannot close without a recorded outcome — otherwise change success reporting counts records
+  rather than measuring anything.
+- **Anything above low risk needs a rollback plan.** A change nobody knows how to back out turns
+  a bad hour into a bad week. Low risk is exempt, because the ceremony would outweigh the exposure.
+- **Window collisions are a warning, not a block.** Two changes in one window is sometimes exactly
+  the intent, and the person scheduling is better placed to judge than a rule is.
+- Approvals reuse the module-agnostic infrastructure built for requests, unchanged.
 
 ### Problem Management — complete
 
@@ -142,9 +160,8 @@ be demonstrated until some are created through the API.
 
 These appear in the navigation marked **"Later"** and are not clickable. Nothing pretends to work.
 
-Change management and CAB, knowledge base, CMDB, asset management, the visual workflow engine,
-reporting and dashboard builder, settings, virtual agent, mobile apps, inbound email,
-third-party integrations.
+Knowledge base, CMDB, asset management, the visual workflow engine, reporting and dashboard
+builder, settings, virtual agent, mobile apps, inbound email, third-party integrations.
 
 The foundation they share — tenancy, identity, permissions, audit, notifications, attachments,
 number sequences, module-agnostic `RecordRelations`, and now module-agnostic approvals — is built
@@ -265,7 +282,7 @@ detail in [SECURITY.md §7](SECURITY.md) and [TESTING.md §9](TESTING.md).
 
 ## 7. Next implementation phase
 
-**Recommended: Change Management and CAB.**
+**Recommended: Knowledge Base.**
 
 Why this and not something else:
 

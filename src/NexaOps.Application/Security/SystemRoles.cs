@@ -48,6 +48,9 @@ public static class SystemRoles
 
         Permissions.ProblemRead,
 
+        // Knowing what is being changed to the services you depend on is not privileged.
+        Permissions.ChangeRead,
+
         // Granted to everyone because approval is scoped by the approval record itself, not by
         // this permission: holding it lets a user act on approvals addressed to them and on
         // nothing else. Line-manager approval means any employee may be an approver, so gating
@@ -89,7 +92,13 @@ public static class SystemRoles
         Permissions.ProblemInvestigate,
         Permissions.ProblemCommentCreate,
         Permissions.ProblemWorkNoteRead,
-        Permissions.ProblemLinkIncident
+        Permissions.ProblemLinkIncident,
+
+        Permissions.ChangeCreate,
+        Permissions.ChangeUpdate,
+        Permissions.ChangeImplement,
+        Permissions.ChangeCommentCreate,
+        Permissions.ChangeWorkNoteRead
     ];
 
     private static readonly string[] ServiceDeskManagerPermissions =
@@ -119,7 +128,13 @@ public static class SystemRoles
         Permissions.ProblemPublishKnownError,
         Permissions.ProblemResolve,
         Permissions.ProblemClose,
-        Permissions.ProblemCancel
+        Permissions.ProblemCancel,
+
+        Permissions.ChangeAssign,
+        Permissions.ChangeSchedule,
+        Permissions.ChangeReview,
+        Permissions.ChangeClose,
+        Permissions.ChangeCancel
     ];
 
     /// <summary>The seed definition of one role.</summary>
@@ -188,7 +203,7 @@ public static class SystemRoles
 
         new(ChangeManager,
             "Change Manager",
-            "Owns the change process. Change management ships in a later phase; today this role carries service desk and request read access, approval oversight, and reporting.",
+            "Owns the change process end to end: assessment, scheduling, the CAB, and post-implementation review. Also holds the emergency change authority.",
             [
                 .. BaselinePermissions,
                 Permissions.IncidentReadAll,
@@ -209,7 +224,21 @@ public static class SystemRoles
                 Permissions.ProblemClose,
                 Permissions.ProblemCommentCreate,
                 Permissions.ProblemWorkNoteRead,
-                Permissions.ProblemLinkIncident
+                Permissions.ProblemLinkIncident,
+
+                Permissions.ChangeCreate,
+                Permissions.ChangeUpdate,
+                Permissions.ChangeAssign,
+                Permissions.ChangeSchedule,
+                Permissions.ChangeImplement,
+                Permissions.ChangeReview,
+                Permissions.ChangeClose,
+                Permissions.ChangeCancel,
+                Permissions.ChangeCommentCreate,
+                Permissions.ChangeWorkNoteRead,
+
+                // The control that stops the emergency path becoming the normal one.
+                Permissions.ChangeRaiseEmergency
             ]),
 
         new(Approver,

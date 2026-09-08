@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using NexaOps.Application.Ai;
 using NexaOps.Application.Ai.Tools;
+using NexaOps.Application.Changes;
 using NexaOps.Application.Incidents;
 using NexaOps.Application.Problems;
 using NexaOps.Application.Requests;
@@ -26,6 +27,9 @@ public static class DependencyInjection
 
         // Problem management.
         services.AddScoped<IProblemService, ProblemService>();
+
+        // Change management.
+        services.AddScoped<IChangeService, ChangeService>();
         services.AddScoped<ISlaService, SlaService>();
 
         // Validators are discovered by assembly scan so a new command validator is picked up
