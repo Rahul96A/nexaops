@@ -1,6 +1,8 @@
+using System.Globalization;
 using NexaOps.Domain.Common;
 using NexaOps.Domain.Identity;
 using NexaOps.Domain.Sla;
+using NexaOps.Domain.Workflows;
 
 namespace NexaOps.Domain.ServiceDesk;
 
@@ -13,7 +15,7 @@ namespace NexaOps.Domain.ServiceDesk;
 /// workflow engine, or a confirmed AI proposal - is driving the change.
 /// </para>
 /// </summary>
-public class Incident : TenantEntity, ISlaTracked, ISlaProgressFacts
+public class Incident : TenantEntity, ISlaTracked, ISlaProgressFacts, IWorkflowTarget
 {
     /// <summary>Human-facing identifier, e.g. INC0001042. Unique per tenant, never reused.</summary>
     public string Number { get; set; } = string.Empty;
@@ -100,6 +102,72 @@ public class Incident : TenantEntity, ISlaTracked, ISlaProgressFacts
 
     /// <summary>Resolution settles the resolution commitment; closure does not restate it.</summary>
     public DateTimeOffset? SlaCompletedAt => ResolvedAt;
+
+    // --- Workflow engine contract (IWorkflowTarget) ---
+
+    /// <summary>Incidents are matched by rules written against the Incident module.</summary>
+    public ServiceModule WorkflowModule => ServiceModule.Incident;
+
+    /// <summary>The reporter, which is who customer-facing rules notify.</summary>
+    public Guid? WorkflowRequesterId => RequesterId;
+
+    /// <inheritdoc />
+    public string WorkflowActionUrl => $"/incidents/{Id}";
+
+    /// <summary>
+    /// What a rule may test an incident on.
+    /// <para>
+    /// An explicit list rather than reflection over the entity: this is the module's public
+    /// contract with the rule engine, and it should change only when somebody decides it should.
+    /// Identifiers are published alongside names so a rule can be written either way — names
+    /// read better and identifiers survive a rename.
+    /// </para>
+    /// </summary>
+    public IReadOnlyDictionary<string, string?> WorkflowFacts => new Dictionary<string, string?>(
+        StringComparer.OrdinalIgnoreCase)
+    {
+        ["Status"] = Status.ToString(),
+        ["Priority"] = ((int)Priority).ToString(CultureInfo.InvariantCulture),
+        ["Impact"] = ((int)Impact).ToString(CultureInfo.InvariantCulture),
+        ["Urgency"] = ((int)Urgency).ToString(CultureInfo.InvariantCulture),
+        ["Channel"] = Channel.ToString(),
+        ["Title"] = Title,
+        ["CategoryId"] = CategoryId?.ToString(),
+        ["CategoryName"] = Category?.Name,
+        ["SubcategoryId"] = SubcategoryId?.ToString(),
+        ["AssignmentGroupId"] = AssignmentGroupId?.ToString(),
+        ["AssignmentGroupName"] = AssignmentGroup?.Name,
+        ["AssignedToUserId"] = AssignedToUserId?.ToString(),
+        ["RequesterId"] = RequesterId.ToString(),
+        ["OrganizationId"] = OrganizationId?.ToString(),
+        ["DepartmentId"] = DepartmentId?.ToString(),
+        ["IsMajorIncident"] = IsMajorIncident ? "true" : "false",
+        ["HasBreachedSla"] = HasBreachedSla ? "true" : "false",
+        ["IsPriorityOverridden"] = IsPriorityOverridden ? "true" : "false",
+        ["ConfigurationItemId"] = ConfigurationItemId?.ToString(),
+        ["ReopenCount"] = ReopenCount.ToString(CultureInfo.InvariantCulture)
+    };
+
+    /// <summary>
+    /// Raises the priority on a rule's instruction, and refuses to lower it.
+    /// <para>
+    /// A rule that can de-prioritise is a rule that can quietly bury somebody's outage. Raising
+    /// is recoverable — a person can always put it back — and it is the direction every real
+    /// escalation rule needs. Priority set this way is marked as an override with the reason
+    /// stated, so it stays visible in reporting rather than looking like the matrix decided it.
+    /// </para>
+    /// </summary>
+    public void ApplyWorkflowPriority(Priority priority)
+    {
+        if ((int)priority >= (int)Priority)
+        {
+            throw new DomainException(
+                "workflow.priority_not_raised",
+                $"This incident is already {Priority}. A rule may raise priority but not lower it.");
+        }
+
+        OverridePriority(priority, "Raised automatically by a workflow rule.");
+    }
 
     // --- Navigation ---
     public User? Requester { get; set; }

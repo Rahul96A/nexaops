@@ -1223,3 +1223,136 @@ export interface AssetSummaryCounts {
   /** Indicative only — real remediation is negotiated, not arithmetic. */
   exposureCost?: number | null;
 }
+
+// --- Workflow automation ---
+
+export type WorkflowTrigger =
+  | 'RecordCreated' | 'StatusChanged' | 'PriorityChanged' | 'AssignmentChanged';
+
+export type WorkflowActionType =
+  | 'NotifyUser' | 'NotifyGroup' | 'AssignToGroup' | 'AssignToUser'
+  | 'SetPriority' | 'RequestApproval';
+
+export type WorkflowRecipient =
+  | 'Requester' | 'Assignee' | 'AssignmentGroup' | 'SpecificUser' | 'SpecificGroup';
+
+export type WorkflowConditionOperator =
+  | 'Equals' | 'NotEquals' | 'In' | 'GreaterThan' | 'LessThan'
+  | 'IsEmpty' | 'IsNotEmpty' | 'Contains';
+
+export type WorkflowRunStatus =
+  | 'Skipped' | 'Succeeded' | 'PartiallyCompleted' | 'Failed' | 'Suppressed';
+
+export type WorkflowStepStatus = 'Succeeded' | 'Skipped' | 'Failed';
+
+/** The modules the engine is driven from. Others cannot carry rules. */
+export type WorkflowModule = 'Incident' | 'Request' | 'Problem' | 'Change';
+
+export interface WorkflowCondition {
+  id: string;
+  field: string;
+  operator: WorkflowConditionOperator;
+  value?: string | null;
+}
+
+export interface WorkflowAction {
+  id: string;
+  sequence: number;
+  type: WorkflowActionType;
+  recipient?: WorkflowRecipient | null;
+  targetGroupId?: string | null;
+  targetGroupName?: string | null;
+  targetUserId?: string | null;
+  targetUserName?: string | null;
+  targetPriority?: Priority | null;
+  message?: string | null;
+}
+
+export interface WorkflowSummary {
+  id: string;
+  name: string;
+  description?: string | null;
+  module: WorkflowModule;
+  trigger: WorkflowTrigger;
+  isActive: boolean;
+  sequence: number;
+  conditionCount: number;
+  actionCount: number;
+  lastRunAt?: string | null;
+  runCount: number;
+  createdAt: string;
+}
+
+export interface WorkflowDetail {
+  id: string;
+  name: string;
+  description?: string | null;
+  module: WorkflowModule;
+  trigger: WorkflowTrigger;
+  isActive: boolean;
+  sequence: number;
+  conditions: WorkflowCondition[];
+  actions: WorkflowAction[];
+  lastRunAt?: string | null;
+  runCount: number;
+  createdAt: string;
+  rowVersion?: string | null;
+}
+
+export interface WorkflowStepRun {
+  sequence: number;
+  actionType: WorkflowActionType;
+  status: WorkflowStepStatus;
+  detail?: string | null;
+  error?: string | null;
+}
+
+export interface WorkflowRun {
+  id: string;
+  workflowDefinitionId: string;
+  workflowName: string;
+  module: WorkflowModule;
+  recordId: string;
+  recordNumber: string;
+  trigger: WorkflowTrigger;
+  status: WorkflowRunStatus;
+  startedAt: string;
+  completedAt?: string | null;
+  outcome?: string | null;
+  steps: WorkflowStepRun[];
+}
+
+/** A field a rule may be written against, published by the server so the editor cannot drift. */
+export interface WorkflowField {
+  field: string;
+  label: string;
+  hint?: string | null;
+}
+
+export interface UpsertWorkflowConditionInput {
+  field: string;
+  operator: WorkflowConditionOperator;
+  value?: string | null;
+}
+
+export interface UpsertWorkflowActionInput {
+  sequence: number;
+  type: WorkflowActionType;
+  recipient?: WorkflowRecipient | null;
+  targetGroupId?: string | null;
+  targetUserId?: string | null;
+  targetPriority?: Priority | null;
+  message?: string | null;
+}
+
+export interface UpsertWorkflowInput {
+  name: string;
+  description?: string | null;
+  module: WorkflowModule;
+  trigger: WorkflowTrigger;
+  isActive: boolean;
+  sequence: number;
+  conditions: UpsertWorkflowConditionInput[];
+  actions: UpsertWorkflowActionInput[];
+  rowVersion?: string | null;
+}

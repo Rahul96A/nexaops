@@ -1,8 +1,10 @@
+using System.Globalization;
 using NexaOps.Domain.Approvals;
 using NexaOps.Domain.Common;
 using NexaOps.Domain.Identity;
 using NexaOps.Domain.ServiceDesk;
 using NexaOps.Domain.Sla;
+using NexaOps.Domain.Workflows;
 
 namespace NexaOps.Domain.Requests;
 
@@ -18,7 +20,7 @@ namespace NexaOps.Domain.Requests;
 /// authorising before anyone starts.
 /// </para>
 /// </summary>
-public class ServiceRequest : TenantEntity, ISlaTracked
+public class ServiceRequest : TenantEntity, ISlaTracked, IWorkflowTarget
 {
     /// <summary>Human-facing identifier, e.g. REQ0001042. Unique per tenant, never reused.</summary>
     public string Number { get; set; } = string.Empty;
@@ -86,6 +88,65 @@ public class ServiceRequest : TenantEntity, ISlaTracked
 
     /// <summary>The fulfilment group is the owning group for policy matching.</summary>
     public Guid? SlaGroupId => FulfilmentGroupId;
+
+    // --- Workflow engine contract (IWorkflowTarget) ---
+
+    /// <summary>Requests are matched by rules written against the Request module.</summary>
+    public ServiceModule WorkflowModule => ServiceModule.Request;
+
+    /// <inheritdoc />
+    public Guid? WorkflowRequesterId => RequesterId;
+
+    /// <inheritdoc />
+    public string WorkflowActionUrl => $"/requests/{Id}";
+
+    /// <summary>
+    /// The fulfilment group is this module's assignment group.
+    /// <para>
+    /// Implemented explicitly rather than renamed: "fulfilment group" is the word the people
+    /// using requests actually use, and bending the module's vocabulary to suit the engine would
+    /// be the wrong way round.
+    /// </para>
+    /// </summary>
+    Guid? IWorkflowTarget.AssignmentGroupId
+    {
+        get => FulfilmentGroupId;
+        set => FulfilmentGroupId = value;
+    }
+
+    /// <summary>What a rule may test a request on. An explicit contract, not reflection.</summary>
+    public IReadOnlyDictionary<string, string?> WorkflowFacts => new Dictionary<string, string?>(
+        StringComparer.OrdinalIgnoreCase)
+    {
+        ["Status"] = Status.ToString(),
+        ["Priority"] = ((int)Priority).ToString(CultureInfo.InvariantCulture),
+        ["Channel"] = Channel.ToString(),
+        ["Title"] = Title,
+        ["CategoryId"] = CategoryId?.ToString(),
+        ["CategoryName"] = Category?.Name,
+        ["FulfilmentGroupId"] = FulfilmentGroupId?.ToString(),
+        ["FulfilmentGroupName"] = FulfilmentGroup?.Name,
+        ["AssignedToUserId"] = AssignedToUserId?.ToString(),
+        ["RequesterId"] = RequesterId.ToString(),
+        ["RequestedForId"] = RequestedForId.ToString(),
+        ["OrganizationId"] = OrganizationId?.ToString(),
+        ["DepartmentId"] = DepartmentId?.ToString(),
+        ["HasBreachedSla"] = HasBreachedSla ? "true" : "false",
+        ["TotalCost"] = TotalCost?.ToString(CultureInfo.InvariantCulture)
+    };
+
+    /// <summary>Raises priority on a rule's instruction. Lowering is refused.</summary>
+    public void ApplyWorkflowPriority(Priority priority)
+    {
+        if ((int)priority >= (int)Priority)
+        {
+            throw new DomainException(
+                "workflow.priority_not_raised",
+                $"This request is already {Priority}. A rule may raise priority but not lower it.");
+        }
+
+        Priority = priority;
+    }
 
     // --- Navigation ---
     public User? Requester { get; set; }

@@ -14,6 +14,7 @@ using NexaOps.Domain.Problems;
 using NexaOps.Domain.Requests;
 using NexaOps.Domain.ServiceDesk;
 using NexaOps.Domain.Sla;
+using NexaOps.Domain.Workflows;
 
 namespace NexaOps.Infrastructure.Persistence;
 
@@ -221,6 +222,13 @@ public class NexaOpsDbContext : DbContext
     public DbSet<Asset> Assets => Set<Asset>();
     public DbSet<AssetAssignment> AssetAssignments => Set<AssetAssignment>();
     public DbSet<SoftwareLicence> SoftwareLicences => Set<SoftwareLicence>();
+
+    // --- Workflow automation ---
+    public DbSet<WorkflowDefinition> WorkflowDefinitions => Set<WorkflowDefinition>();
+    public DbSet<WorkflowCondition> WorkflowConditions => Set<WorkflowCondition>();
+    public DbSet<WorkflowAction> WorkflowActions => Set<WorkflowAction>();
+    public DbSet<WorkflowRun> WorkflowRuns => Set<WorkflowRun>();
+    public DbSet<WorkflowStepRun> WorkflowStepRuns => Set<WorkflowStepRun>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

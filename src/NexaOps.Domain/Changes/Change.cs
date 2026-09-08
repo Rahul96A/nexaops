@@ -1,6 +1,8 @@
+using System.Globalization;
 using NexaOps.Domain.Common;
 using NexaOps.Domain.Identity;
 using NexaOps.Domain.ServiceDesk;
+using NexaOps.Domain.Workflows;
 
 namespace NexaOps.Domain.Changes;
 
@@ -13,7 +15,7 @@ namespace NexaOps.Domain.Changes;
 /// afterwards. Recording which of the three applied is what makes the process auditable.
 /// </para>
 /// </summary>
-public class Change : TenantEntity
+public class Change : TenantEntity, IWorkflowTarget
 {
     /// <summary>Human-facing identifier, e.g. CHG0000042. Unique per tenant, never reused.</summary>
     public string Number { get; set; } = string.Empty;
@@ -84,6 +86,50 @@ public class Change : TenantEntity
 
     /// <summary>Configuration items affected. Populated in the CMDB phase.</summary>
     public Guid? ConfigurationItemId { get; set; }
+
+    // --- Workflow engine contract (IWorkflowTarget) ---
+
+    /// <summary>Changes are matched by rules written against the Change module.</summary>
+    public ServiceModule WorkflowModule => ServiceModule.Change;
+
+    /// <summary>The person accountable for the change succeeding.</summary>
+    public Guid? WorkflowRequesterId => RequestedByUserId;
+
+    /// <inheritdoc />
+    public string WorkflowActionUrl => $"/changes/{Id}";
+
+    /// <summary>What a rule may test a change on.</summary>
+    public IReadOnlyDictionary<string, string?> WorkflowFacts => new Dictionary<string, string?>(
+        StringComparer.OrdinalIgnoreCase)
+    {
+        ["Status"] = Status.ToString(),
+        ["Priority"] = ((int)Priority).ToString(CultureInfo.InvariantCulture),
+        ["Risk"] = Risk.ToString(),
+        ["Impact"] = ((int)Impact).ToString(CultureInfo.InvariantCulture),
+        ["Type"] = Type.ToString(),
+        ["Title"] = Title,
+        ["CategoryId"] = CategoryId?.ToString(),
+        ["CategoryName"] = Category?.Name,
+        ["AssignmentGroupId"] = AssignmentGroupId?.ToString(),
+        ["AssignmentGroupName"] = AssignmentGroup?.Name,
+        ["AssignedToUserId"] = AssignedToUserId?.ToString(),
+        ["RequestedByUserId"] = RequestedByUserId.ToString(),
+        ["RequiresDowntime"] = RequiresDowntime ? "true" : "false",
+        ["ConfigurationItemId"] = ConfigurationItemId?.ToString()
+    };
+
+    /// <summary>Raises priority on a rule's instruction. Lowering is refused.</summary>
+    public void ApplyWorkflowPriority(Priority priority)
+    {
+        if ((int)priority >= (int)Priority)
+        {
+            throw new DomainException(
+                "workflow.priority_not_raised",
+                $"This change is already {Priority}. A rule may raise priority but not lower it.");
+        }
+
+        Priority = priority;
+    }
 
     // --- Navigation ---
     public User? AssignedTo { get; set; }

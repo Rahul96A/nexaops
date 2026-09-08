@@ -29,6 +29,8 @@ import { CmdbPage } from '@/features/cmdb/CmdbPage';
 import { CiDetailPage } from '@/features/cmdb/CiDetailPage';
 import { AssetsPage } from '@/features/assets/AssetsPage';
 import { AssetDetailPage } from '@/features/assets/AssetDetailPage';
+import { WorkflowsPage } from '@/features/workflows/WorkflowsPage';
+import { WorkflowEditorPage } from '@/features/workflows/WorkflowEditorPage';
 import { AuditPage } from '@/features/audit/AuditPage';
 import { NotFoundPage } from '@/features/NotFoundPage';
 
@@ -232,6 +234,33 @@ export function App() {
             element={
               <RequireAuth permission={Permissions.assetRead}>
                 <AssetDetailPage />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="workflows"
+            element={
+              <RequireAuth permission={Permissions.workflowRead}>
+                <WorkflowsPage />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="workflows/new"
+            element={
+              <RequireAuth permission={Permissions.workflowManage}>
+                <WorkflowEditorPage />
+              </RequireAuth>
+            }
+          />
+
+          <Route
+            path="workflows/:id"
+            element={
+              <RequireAuth permission={Permissions.workflowManage}>
+                <WorkflowEditorPage />
               </RequireAuth>
             }
           />

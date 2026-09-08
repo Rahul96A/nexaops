@@ -7,6 +7,7 @@ using NexaOps.Application.Incidents;
 using NexaOps.Application.Notifications;
 using NexaOps.Application.Security;
 using NexaOps.Application.Sla;
+using NexaOps.Application.Workflows;
 using NexaOps.Domain.Approvals;
 using NexaOps.Domain.Auditing;
 using NexaOps.Domain.Catalog;
@@ -15,6 +16,7 @@ using NexaOps.Domain.Platform;
 using NexaOps.Domain.Requests;
 using NexaOps.Domain.Sla;
 using NexaOps.Domain.ServiceDesk;
+using NexaOps.Domain.Workflows;
 
 namespace NexaOps.Application.Requests;
 
@@ -74,6 +76,7 @@ public sealed class RequestService : IRequestService
     private readonly INumberSequenceService _numbers;
     private readonly ISlaService _sla;
     private readonly INotificationService _notifications;
+    private readonly IWorkflowEngine _workflows;
     private readonly IAuditService _audit;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
@@ -89,6 +92,7 @@ public sealed class RequestService : IRequestService
         INumberSequenceService numbers,
         ISlaService sla,
         INotificationService notifications,
+        IWorkflowEngine workflows,
         IAuditService audit,
         IUnitOfWork unitOfWork,
         ICurrentUser currentUser,
@@ -103,6 +107,7 @@ public sealed class RequestService : IRequestService
         _numbers = numbers;
         _sla = sla;
         _notifications = notifications;
+        _workflows = workflows;
         _audit = audit;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
@@ -352,6 +357,9 @@ public sealed class RequestService : IRequestService
             "Service request {Number} raised by {UserId} with {ItemCount} item(s); approval required: {Approval}.",
             request.Number, _currentUser.UserId, request.Items.Count, approvalRaised);
 
+        // After the request is committed, and unable to fail it. See the engine.
+        await _workflows.RunAsync(request, WorkflowTrigger.RecordCreated, ct).ConfigureAwait(false);
+
         return await ReloadAsync(request.Id, ct).ConfigureAwait(false);
     }
 
@@ -451,6 +459,9 @@ public sealed class RequestService : IRequestService
         }
 
         await _unitOfWork.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        await _workflows.RunAsync(request, WorkflowTrigger.AssignmentChanged, ct).ConfigureAwait(false);
+
         return await ReloadAsync(request.Id, ct).ConfigureAwait(false);
     }
 
@@ -522,6 +533,9 @@ public sealed class RequestService : IRequestService
         }
 
         await _unitOfWork.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        await _workflows.RunAsync(request, WorkflowTrigger.StatusChanged, ct).ConfigureAwait(false);
+
         return await ReloadAsync(request.Id, ct).ConfigureAwait(false);
     }
 

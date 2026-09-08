@@ -4,10 +4,12 @@ using NexaOps.Application.Abstractions;
 using NexaOps.Application.Common;
 using NexaOps.Application.Incidents;
 using NexaOps.Application.Security;
+using NexaOps.Application.Workflows;
 using NexaOps.Domain.Auditing;
 using NexaOps.Domain.Common;
 using NexaOps.Domain.Problems;
 using NexaOps.Domain.ServiceDesk;
+using NexaOps.Domain.Workflows;
 
 namespace NexaOps.Application.Problems;
 
@@ -61,6 +63,7 @@ public sealed class ProblemService : IProblemService
     private readonly IIncidentRepository _incidents;
     private readonly IServiceDeskReferenceRepository _reference;
     private readonly INumberSequenceService _numbers;
+    private readonly IWorkflowEngine _workflows;
     private readonly IAuditService _audit;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
@@ -73,6 +76,7 @@ public sealed class ProblemService : IProblemService
         IIncidentRepository incidents,
         IServiceDeskReferenceRepository reference,
         INumberSequenceService numbers,
+        IWorkflowEngine workflows,
         IAuditService audit,
         IUnitOfWork unitOfWork,
         ICurrentUser currentUser,
@@ -84,6 +88,7 @@ public sealed class ProblemService : IProblemService
         _incidents = incidents;
         _reference = reference;
         _numbers = numbers;
+        _workflows = workflows;
         _audit = audit;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
@@ -223,6 +228,9 @@ public sealed class ProblemService : IProblemService
             "Problem {Number} raised by {UserId} from {Origin}.",
             problem.Number, _currentUser.UserId, problem.Origin);
 
+        // After the problem is committed, and unable to fail it. See the engine.
+        await _workflows.RunAsync(problem, WorkflowTrigger.RecordCreated, ct).ConfigureAwait(false);
+
         return await ReloadAsync(problem.Id, ct).ConfigureAwait(false);
     }
 
@@ -342,6 +350,9 @@ public sealed class ProblemService : IProblemService
         _audit.Record(AuditAction.Assign, EntityType, problem.Id.ToString(), problem.Number, "Assignment changed.");
 
         await _unitOfWork.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        await _workflows.RunAsync(problem, WorkflowTrigger.AssignmentChanged, ct).ConfigureAwait(false);
+
         return await ReloadAsync(problem.Id, ct).ConfigureAwait(false);
     }
 
@@ -385,6 +396,9 @@ public sealed class ProblemService : IProblemService
         }
 
         await _unitOfWork.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        await _workflows.RunAsync(problem, WorkflowTrigger.StatusChanged, ct).ConfigureAwait(false);
+
         return await ReloadAsync(problem.Id, ct).ConfigureAwait(false);
     }
 

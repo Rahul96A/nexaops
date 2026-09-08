@@ -10,6 +10,7 @@ using NexaOps.Application.Knowledge;
 using NexaOps.Application.Problems;
 using NexaOps.Application.Requests;
 using NexaOps.Application.Sla;
+using NexaOps.Application.Workflows;
 
 namespace NexaOps.Application;
 
@@ -42,6 +43,11 @@ public static class DependencyInjection
 
         // Asset management.
         services.AddScoped<IAssetService, AssetService>();
+
+        // Workflow automation. The engine is scoped, and its recursion guard relies on that:
+        // one instance per request is what stops a rule's own action re-entering the engine.
+        services.AddScoped<IWorkflowService, WorkflowService>();
+        services.AddScoped<IWorkflowEngine, WorkflowEngine>();
         services.AddScoped<ISlaService, SlaService>();
 
         // Validators are discovered by assembly scan so a new command validator is picked up

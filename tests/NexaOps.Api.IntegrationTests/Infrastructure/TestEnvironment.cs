@@ -277,6 +277,32 @@ public sealed class TestEnvironment : IAsyncLifetime
     /// <summary>An unauthenticated client, for testing that endpoints are closed by default.</summary>
     public HttpClient CreateAnonymousClient() => Factory.CreateClient();
 
+    /// <summary>
+    /// Deactivates a user directly in the database, the way a leaver would be.
+    /// <para>
+    /// Written through the context rather than the API because it is set-up, not the thing under
+    /// test, and because the tests that need it are about what happens to records that still
+    /// point at the person after they have gone.
+    /// </para>
+    /// </summary>
+    public Task DeactivateUserAsync(Guid userId) => SetUserStatusAsync(userId, UserStatus.Disabled);
+
+    public Task ReactivateUserAsync(Guid userId) => SetUserStatusAsync(userId, UserStatus.Active);
+
+    private async Task SetUserStatusAsync(Guid userId, UserStatus status)
+    {
+        using var scope = Factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<NexaOpsDbContext>();
+
+        using var suppression = context.SuppressTenantFilter();
+        using var auditSuppression = context.SuppressAuditCapture();
+
+        var user = await context.Users.FirstAsync(u => u.Id == userId);
+        user.Status = status;
+
+        await context.SaveChangesAsync();
+    }
+
     public sealed record SignInResponse(string AccessToken, string RefreshToken);
 }
 

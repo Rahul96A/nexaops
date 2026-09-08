@@ -53,7 +53,10 @@ public enum NotificationKind
     RequestCommented = 17,
     RequestFulfilled = 18,
     RequestRejected = 19,
-    RequestCancelled = 20
+    RequestCancelled = 20,
+
+    /// <summary>Raised by an automation rule rather than by a person's action.</summary>
+    WorkflowNotification = 21
 }
 
 public enum NotificationSeverity

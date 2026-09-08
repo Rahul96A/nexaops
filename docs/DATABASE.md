@@ -189,16 +189,21 @@ One migration, `InitialSchema`. Applied automatically on startup in Development 
 self-contained executable — that runs as its own pipeline step before the new revision goes live.
 The application never migrates a production database as a side effect of starting.
 
+> The startup project is `NexaOps.Infrastructure`, not the API. `Microsoft.EntityFrameworkCore.Design`
+> is referenced only by Infrastructure — the API does not carry design-time tooling into a
+> deployed image — so the tools resolve the context through `DesignTimeDbContextFactory`.
+> Pointing `--startup-project` at the API fails with "doesn't reference Microsoft.EntityFrameworkCore.Design".
+
 ```bash
 # add a migration
 dotnet ef migrations add <Name> \
   --project src/NexaOps.Infrastructure \
-  --startup-project src/NexaOps.Api \
+  --startup-project src/NexaOps.Infrastructure \
   --output-dir Persistence/Migrations
 
 # what would it do?
 dotnet ef migrations script --idempotent \
-  --project src/NexaOps.Infrastructure --startup-project src/NexaOps.Api
+  --project src/NexaOps.Infrastructure --startup-project src/NexaOps.Infrastructure
 ```
 
 > If you regenerate the initial migration against a database that already has the schema, you

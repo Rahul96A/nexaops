@@ -298,6 +298,30 @@ public static class Permissions
     public const string LicenceManage = "licence.manage";
 
     // ---------------------------------------------------------------
+    // Workflow
+    // ---------------------------------------------------------------
+
+    /// <summary>
+    /// Read automation rules and their run history.
+    /// <para>
+    /// Held more widely than the ability to change them, on purpose: an agent who cannot see
+    /// why a ticket rerouted itself concludes the system is haunted, and the run history is the
+    /// answer to that question.
+    /// </para>
+    /// </summary>
+    public const string WorkflowRead = "workflow.read";
+
+    /// <summary>
+    /// Create, edit, activate and deactivate automation rules.
+    /// <para>
+    /// Narrowly held. A rule acts on records its author may not be able to see and notifies
+    /// people its author may not manage, so this is closer to a configuration permission than an
+    /// operational one.
+    /// </para>
+    /// </summary>
+    public const string WorkflowManage = "workflow.manage";
+
+    // ---------------------------------------------------------------
     // Reporting
     // ---------------------------------------------------------------
 
@@ -434,6 +458,9 @@ public static class Permissions
         new(AssetDispose, "Asset", "Dispose of assets", "Dispose of or write off an asset."),
         new(LicenceRead, "Asset", "View licences", "Read software licence agreements and compliance."),
         new(LicenceManage, "Asset", "Manage licences", "Maintain licence agreements and deployment counts."),
+
+        new(WorkflowRead, "Workflow", "View automation rules", "Read automation rules and their run history."),
+        new(WorkflowManage, "Workflow", "Manage automation rules", "Create, edit and activate automation rules."),
 
         new(ReportView, "Reporting", "View reports", "Open dashboards and reports."),
         new(ReportExport, "Reporting", "Export reports", "Export report output to file."),

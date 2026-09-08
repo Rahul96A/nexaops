@@ -5,10 +5,12 @@ using NexaOps.Application.Common;
 using NexaOps.Application.Incidents;
 using NexaOps.Application.Requests;
 using NexaOps.Application.Security;
+using NexaOps.Application.Workflows;
 using NexaOps.Domain.Approvals;
 using NexaOps.Domain.Auditing;
 using NexaOps.Domain.Changes;
 using NexaOps.Domain.Common;
+using NexaOps.Domain.Workflows;
 
 namespace NexaOps.Application.Changes;
 
@@ -72,6 +74,7 @@ public sealed class ChangeService : IChangeService
     private readonly IApprovalService _approvals;
     private readonly IServiceDeskReferenceRepository _reference;
     private readonly INumberSequenceService _numbers;
+    private readonly IWorkflowEngine _workflows;
     private readonly IAuditService _audit;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
@@ -84,6 +87,7 @@ public sealed class ChangeService : IChangeService
         IApprovalService approvals,
         IServiceDeskReferenceRepository reference,
         INumberSequenceService numbers,
+        IWorkflowEngine workflows,
         IAuditService audit,
         IUnitOfWork unitOfWork,
         ICurrentUser currentUser,
@@ -95,6 +99,7 @@ public sealed class ChangeService : IChangeService
         _approvals = approvals;
         _reference = reference;
         _numbers = numbers;
+        _workflows = workflows;
         _audit = audit;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
@@ -232,6 +237,9 @@ public sealed class ChangeService : IChangeService
             "Change {Number} raised by {UserId}: {Type}, {Risk} risk.",
             change.Number, _currentUser.UserId, change.Type, change.Risk);
 
+        // After the change is committed, and unable to fail it. See the engine.
+        await _workflows.RunAsync(change, WorkflowTrigger.RecordCreated, ct).ConfigureAwait(false);
+
         return await ReloadAsync(change.Id, ct).ConfigureAwait(false);
     }
 
@@ -356,6 +364,9 @@ public sealed class ChangeService : IChangeService
         _audit.Record(AuditAction.Assign, EntityType, change.Id.ToString(), change.Number, "Assignment changed.");
 
         await _unitOfWork.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        await _workflows.RunAsync(change, WorkflowTrigger.AssignmentChanged, ct).ConfigureAwait(false);
+
         return await ReloadAsync(change.Id, ct).ConfigureAwait(false);
     }
 
@@ -453,6 +464,9 @@ public sealed class ChangeService : IChangeService
             (string.IsNullOrWhiteSpace(command.Note) ? string.Empty : $" {command.Note.Trim()}"));
 
         await _unitOfWork.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        await _workflows.RunAsync(change, WorkflowTrigger.StatusChanged, ct).ConfigureAwait(false);
+
         return await ReloadAsync(change.Id, ct).ConfigureAwait(false);
     }
 

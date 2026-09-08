@@ -4,11 +4,13 @@ using NexaOps.Application.Common;
 using NexaOps.Application.Notifications;
 using NexaOps.Application.Security;
 using NexaOps.Application.Sla;
+using NexaOps.Application.Workflows;
 using NexaOps.Domain.Auditing;
 using NexaOps.Domain.Common;
 using NexaOps.Domain.Platform;
 using NexaOps.Domain.ServiceDesk;
 using NexaOps.Domain.Sla;
+using NexaOps.Domain.Workflows;
 
 namespace NexaOps.Application.Incidents;
 
@@ -23,6 +25,7 @@ public sealed class IncidentService : IIncidentService
     private readonly IServiceDeskReferenceRepository _reference;
     private readonly INumberSequenceService _numbers;
     private readonly ISlaService _sla;
+    private readonly IWorkflowEngine _workflows;
     private readonly INotificationService _notifications;
     private readonly IAuditService _audit;
     private readonly IUnitOfWork _unitOfWork;
@@ -37,6 +40,7 @@ public sealed class IncidentService : IIncidentService
         IServiceDeskReferenceRepository reference,
         INumberSequenceService numbers,
         ISlaService sla,
+        IWorkflowEngine workflows,
         INotificationService notifications,
         IAuditService audit,
         IUnitOfWork unitOfWork,
@@ -50,6 +54,7 @@ public sealed class IncidentService : IIncidentService
         _reference = reference;
         _numbers = numbers;
         _sla = sla;
+        _workflows = workflows;
         _notifications = notifications;
         _audit = audit;
         _unitOfWork = unitOfWork;
@@ -238,6 +243,11 @@ public sealed class IncidentService : IIncidentService
 
         _logger.LogInformation("Incident {IncidentId} created by {UserId}.", incidentId, actorId);
 
+        // Automation runs after the incident is committed, and cannot fail the raise. A rule
+        // that reroutes a ticket is useful; a rule that stops one being logged is not.
+        await RunWorkflowsAsync(incidentId, WorkflowTrigger.RecordCreated, cancellationToken)
+            .ConfigureAwait(false);
+
         return await GetAsync(incidentId, cancellationToken).ConfigureAwait(false);
     }
 
@@ -381,6 +391,9 @@ public sealed class IncidentService : IIncidentService
         NotifyOnAssignment(incident, previousAssignee);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        await _workflows.RunAsync(incident, WorkflowTrigger.AssignmentChanged, cancellationToken)
+            .ConfigureAwait(false);
+
         return await GetAsync(id, cancellationToken).ConfigureAwait(false);
     }
 
@@ -466,6 +479,9 @@ public sealed class IncidentService : IIncidentService
         NotifyStatusChanged(incident, previousStatus);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        await _workflows.RunAsync(incident, WorkflowTrigger.StatusChanged, cancellationToken)
+            .ConfigureAwait(false);
+
         return await GetAsync(id, cancellationToken).ConfigureAwait(false);
     }
 
@@ -528,6 +544,9 @@ public sealed class IncidentService : IIncidentService
         {
             NotifyPriorityChanged(incident, previousPriority);
             await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            await _workflows.RunAsync(incident, WorkflowTrigger.PriorityChanged, cancellationToken)
+                .ConfigureAwait(false);
         }
 
         return await GetAsync(id, cancellationToken).ConfigureAwait(false);
@@ -886,6 +905,24 @@ public sealed class IncidentService : IIncidentService
         });
 
     // --- Notifications ---
+
+    /// <summary>
+    /// Runs automation against a freshly created incident.
+    /// <para>
+    /// Reloads it rather than reusing the instance from the creation transaction: creation runs
+    /// inside its own transaction scope, and a rule that reassigns the incident must write
+    /// through a unit of work that is still open.
+    /// </para>
+    /// </summary>
+    private async Task RunWorkflowsAsync(Guid id, WorkflowTrigger trigger, CancellationToken cancellationToken)
+    {
+        var incident = await _incidents.GetAsync(id, cancellationToken).ConfigureAwait(false);
+
+        if (incident is not null)
+        {
+            await _workflows.RunAsync(incident, trigger, cancellationToken).ConfigureAwait(false);
+        }
+    }
 
     private void NotifyOnAssignment(Incident incident, Guid? previousAssignee)
     {

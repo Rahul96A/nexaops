@@ -2,8 +2,8 @@
 
 **As of 8 September 2026.** Phase 1 (platform foundation), Incident Management, Phase 2
 (Service Requests, Service Catalogue and Approvals) Phase 3 (Problem Management), Phase 4
-(Change Management and the CAB) Phase 5 (Knowledge Base), Phase 6 (CMDB) and
-Phase 7 (Asset Management), plus a demo environment.
+(Change Management and the CAB) Phase 5 (Knowledge Base), Phase 6 (CMDB),
+Phase 7 (Asset Management) and Phase 8 (workflow automation), plus a demo environment.
 
 This document is written to be handed to someone who has to decide whether to rely on this. It
 lists what works, what does not, and what is deliberately absent — with the gaps in the same
@@ -16,7 +16,7 @@ detail as the achievements.
 | Gate | Result |
 |---|---|
 | `dotnet build NexaOps.slnx -warnaserror` | **0 warnings, 0 errors** |
-| `dotnet test NexaOps.slnx` | **515 passing** |
+| `dotnet test NexaOps.slnx` | **574 passing** |
 | `npm run typecheck` | Clean |
 | `npm run lint` | Clean |
 | `npm run test` | **38 passing** |
@@ -26,7 +26,7 @@ detail as the achievements.
 | `npm audit` | No advisories |
 | gitleaks (full history) | No secrets |
 
-553 tests total (308 domain, 31 application, 176 integration, 38 front end). Breakdown and
+612 tests total (344 domain, 42 application, 188 integration, 38 front end). Breakdown and
 strategy in [TESTING.md](TESTING.md).
 
 > Two of these gates were previously reported as passing when they were not. `dotnet build`
@@ -136,6 +136,54 @@ through the API; the UI covers the register, custody and the licence position.
 
 **Not built:** item and relationship editing in the UI. Both are managed through the API; the
 pages read the register and the graph.
+
+### Workflow automation — complete
+
+- **A rule list, not a flowchart.** A canvas designer is the feature customers ask for and the
+  feature nobody can debug at three in the morning. A rule is a trigger, an AND-list of
+  conditions and an ordered list of actions — readable in the shape it is stored in, which is
+  what makes the run history explainable afterwards.
+- **Conditions combine with AND, always.** There is no OR and no nesting. Both are easy to store
+  and hard to read back, and a rule whose behaviour cannot be predicted by reading it gets
+  switched off after the first surprise. Two rules express an OR perfectly well.
+- **Every action is backed by a service that already exists.** There is no "run a script" and no
+  "call a webhook": both would make the engine look more capable than it is, and both need a
+  security model — sandboxing, egress control, secret handling — that has not been built.
+- **A rule can raise priority and never lower it.** Raising is recoverable and is the direction
+  every real escalation rule needs; a rule that can de-prioritise can quietly bury somebody's
+  outage. Priority set this way is marked as an override with the reason stated, so it stays
+  visible in reporting rather than looking like the matrix decided it.
+- **Automation does not trigger automation.** An action that changes a record raises the trigger
+  that change corresponds to, exactly as a person doing the same thing would — and the engine's
+  re-entrancy guard then refuses it and records why. Raising it and refusing it, rather than
+  never raising it, is what makes the guarantee testable and what tells an administrator whose
+  rule sits on `PriorityChanged` that another rule's escalation will not fire it.
+- **A failing rule cannot fail the user's action.** The engine runs after the record is
+  committed, catches per action, and continues. One bad rule must not stop a service desk from
+  logging incidents; the failure belongs in the run history, not in a 500.
+- **Runs are recorded even when nothing happened.** "Why did my rule not fire" is the question
+  people actually have about automation, and a log of successes cannot answer it. A skipped run
+  names the condition that stopped it and what the record held instead.
+- **A partly-successful run reports itself as partly successful**, not as either extreme.
+  "Succeeded" would hide a failure somebody needs to see; "failed" would suggest nothing happened
+  when the record was in fact rerouted.
+- **The engine mutates records through a module-agnostic contract** (`IWorkflowTarget`), the same
+  shape as the SLA engine's. Each module publishes an explicit list of facts a rule may test
+  rather than exposing its properties by reflection — and a test checks that list against what
+  the editor offers, because a field offered but not published is a rule that looks configured
+  and silently never matches.
+- **Changes made by a rule are audited to the rule**, not to whoever's action triggered it. An
+  audit trail saying an agent reassigned a ticket they never touched is worse than no entry.
+- Actions carry **no foreign keys to users or groups**. A rule pointing at somebody who has left
+  should fail loudly in the run history, not block that person from being deactivated.
+- Reading rules and their history is a **wider permission than writing them**: an agent whose
+  ticket rerouted itself needs to be able to find out why.
+
+**Not built:** scheduled rules (nothing fires on a timer — every trigger is a record changing),
+approval-outcome and SLA-breach triggers, actions that write arbitrary fields or work notes, and
+any outbound integration. Rules run only against incidents, requests, problems and changes; the
+other modules do not raise triggers, and the field list for them is empty rather than
+misleadingly populated.
 
 ### Knowledge Base — complete
 
@@ -363,31 +411,28 @@ detail in [SECURITY.md §7](SECURITY.md) and [TESTING.md §9](TESTING.md).
 | `GroupBy` with a key reaching through a navigation | 500 on the dashboard workload panel |
 | Invalid sort field returned 409 | Wrong status; now 400 with field errors |
 | Audit row volume during seeding | Command timeouts. Fixed with batching and an audit-suppression scope |
+| The workflow recursion guard guarded a path nothing reached | A rule's own action never re-entered the engine, so "automation does not trigger automation" was an untested claim. Actions now raise their corresponding trigger, which the guard refuses and records |
 | Asset return took its destination status from the caller, unconstrained | A service desk manager holding only `asset.assign` could return an asset straight to Disposed — around the narrower `asset.dispose` permission, and with no disposal date recorded |
 
 ---
 
 ## 7. Next implementation phase
 
-**Recommended: the workflow engine, then reporting.**
+**Recommended: reporting, then the settings UI.**
 
-Seven modules now exist — incidents, requests and the catalogue, problems, changes, knowledge,
-CMDB and assets. That is the condition the workflow engine was deliberately waiting on: it is the
-most valuable long-term capability and the easiest to build prematurely, and it should be
-designed against seven real lifecycles rather than one imagined one. The orchestration each
-module actually asked for — approval routing, fulfilment hand-offs, CAB gates, review reminders,
-refresh and expiry dates that need to become work — is now observable rather than guessed at.
-
-Reporting follows it, because a workflow nobody can measure is a workflow nobody trusts.
+Eight modules now exist, and automation runs across four of them. Reporting follows because a
+workflow nobody can measure is a workflow nobody trusts: the run history answers "what did this
+rule do", and nothing yet answers "is the desk getting better".
 
 Still to build, in the order they earn their place:
 
-1. **Workflow engine** — a designer, a runtime, and triggers on the records above.
-2. **Reporting and dashboards** beyond the service desk view.
-3. **Settings and administration UI.** Categories, groups, roles, SLA definitions and calendars
+1. **Reporting and dashboards** beyond the service desk view.
+2. **Settings and administration UI.** Categories, groups, roles, SLA definitions and calendars
    are all API-only today; a customer cannot configure their own tenant without a developer.
-4. **Virtual agent** on the existing grounded AI abstraction.
-5. **Integration surface** — inbound email, a mobile client, third-party connectors.
+3. **Virtual agent** on the existing grounded AI abstraction.
+4. **Integration surface** — inbound email, a mobile client, third-party connectors.
+5. **Scheduled and outcome-driven workflow triggers** — a timer, an approval outcome, an SLA
+   breach. The engine's shape supports them; the triggers are not raised yet.
 
 Before or alongside them, four items should be treated as prerequisites rather than backlog:
 

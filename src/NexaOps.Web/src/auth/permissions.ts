@@ -107,6 +107,9 @@ export const Permissions = {
   settingRead: 'setting.read',
   settingManage: 'setting.manage',
 
+  workflowRead: 'workflow.read',
+  workflowManage: 'workflow.manage',
+
   reportView: 'report.view',
   reportExport: 'report.export',
 

@@ -112,7 +112,11 @@ public static class SystemRoles
         Permissions.CmdbRead,
 
         // An agent fielding "my laptop is broken" needs to see what the caller actually holds.
-        Permissions.AssetRead
+        Permissions.AssetRead,
+
+        // An agent whose ticket rerouted itself needs to be able to find out why. Without this
+        // the honest answer to "who assigned this to me" is unavailable to the person asking.
+        Permissions.WorkflowRead
     ];
 
     private static readonly string[] ServiceDeskManagerPermissions =
@@ -129,6 +133,10 @@ public static class SystemRoles
         Permissions.SlaManage,
         Permissions.CalendarManage,
         Permissions.AuditRead,
+
+        // Automation routes other people's work, so writing rules sits with the person who owns
+        // the desk rather than with the people working it.
+        Permissions.WorkflowManage,
 
         // Cancelling somebody else's request, editing the catalogue and seeing the whole
         // approval backlog are management acts, not agent acts.

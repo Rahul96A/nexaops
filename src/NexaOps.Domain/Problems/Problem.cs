@@ -1,6 +1,8 @@
+using System.Globalization;
 using NexaOps.Domain.Common;
 using NexaOps.Domain.Identity;
 using NexaOps.Domain.ServiceDesk;
+using NexaOps.Domain.Workflows;
 
 namespace NexaOps.Domain.Problems;
 
@@ -18,7 +20,7 @@ namespace NexaOps.Domain.Problems;
 /// them.
 /// </para>
 /// </summary>
-public class Problem : TenantEntity
+public class Problem : TenantEntity, IWorkflowTarget
 {
     /// <summary>Human-facing identifier, e.g. PRB0000042. Unique per tenant, never reused.</summary>
     public string Number { get; set; } = string.Empty;
@@ -88,6 +90,55 @@ public class Problem : TenantEntity
 
     /// <summary>True when this problem is judged to affect a service broadly enough to publish.</summary>
     public bool IsMajorProblem { get; set; }
+
+    // --- Workflow engine contract (IWorkflowTarget) ---
+
+    /// <summary>Problems are matched by rules written against the Problem module.</summary>
+    public ServiceModule WorkflowModule => ServiceModule.Problem;
+
+    /// <summary>
+    /// The owner, who is the person accountable for the investigation.
+    /// <para>
+    /// A problem has no requester: it is raised by the service desk about a pattern, not by a
+    /// person about their own trouble. The accountable owner is the nearest honest answer to
+    /// "who does a requester-facing rule notify", and rules that want the assignee can say so.
+    /// </para>
+    /// </summary>
+    public Guid? WorkflowRequesterId => OwnerUserId;
+
+    /// <inheritdoc />
+    public string WorkflowActionUrl => $"/problems/{Id}";
+
+    /// <summary>What a rule may test a problem on.</summary>
+    public IReadOnlyDictionary<string, string?> WorkflowFacts => new Dictionary<string, string?>(
+        StringComparer.OrdinalIgnoreCase)
+    {
+        ["Status"] = Status.ToString(),
+        ["Priority"] = ((int)Priority).ToString(CultureInfo.InvariantCulture),
+        ["Origin"] = Origin.ToString(),
+        ["Title"] = Title,
+        ["CategoryId"] = CategoryId?.ToString(),
+        ["CategoryName"] = Category?.Name,
+        ["SubcategoryId"] = SubcategoryId?.ToString(),
+        ["AssignmentGroupId"] = AssignmentGroupId?.ToString(),
+        ["AssignmentGroupName"] = AssignmentGroup?.Name,
+        ["AssignedToUserId"] = AssignedToUserId?.ToString(),
+        ["OwnerUserId"] = OwnerUserId?.ToString(),
+        ["IsMajorProblem"] = IsMajorProblem ? "true" : "false"
+    };
+
+    /// <summary>Raises priority on a rule's instruction. Lowering is refused.</summary>
+    public void ApplyWorkflowPriority(Priority priority)
+    {
+        if ((int)priority >= (int)Priority)
+        {
+            throw new DomainException(
+                "workflow.priority_not_raised",
+                $"This problem is already {Priority}. A rule may raise priority but not lower it.");
+        }
+
+        Priority = priority;
+    }
 
     // --- Navigation ---
     public User? AssignedTo { get; set; }
