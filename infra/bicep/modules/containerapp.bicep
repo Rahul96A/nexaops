@@ -11,7 +11,14 @@ param identityId string
 @description('Client id of that identity. DefaultAzureCredential needs it to pick the right one when several are attached.')
 param identityClientId string
 
-param registryLoginServer string
+@description('''
+Private registry to authenticate against, or empty for a public one.
+
+Empty means the image is pulled anonymously -- which is what a public GitHub Container Registry
+image needs, and what lets an environment run without an Azure Container Registry at all. ACR has
+no free tier, so a registry is the difference between a free environment and a five-dollar one.
+''')
+param registryLoginServer string = ''
 param logAnalyticsCustomerId string
 
 @secure()
@@ -110,7 +117,9 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
         }
       }
 
-      registries: [
+      // Omitted entirely for a public image: declaring a registry the identity has no role on
+      // makes the pull fail rather than fall back to anonymous.
+      registries: empty(registryLoginServer) ? [] : [
         {
           server: registryLoginServer
           identity: identityId

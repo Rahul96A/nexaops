@@ -13,6 +13,15 @@ param sku object
 param maxSizeBytes int
 param zoneRedundant bool
 
+@description('''
+Use the Azure SQL free offer: 100,000 vCore-seconds and 32 GB a month at no charge.
+
+One free database per subscription, and only on serverless General Purpose Gen5. When the
+monthly allowance runs out the database pauses rather than billing -- see the exhaustion
+behaviour below, which is what makes "free" a guarantee instead of an expectation.
+''')
+param useFreeLimit bool = false
+
 @allowed(['Local', 'Zone', 'Geo'])
 param backupStorageRedundancy string
 
@@ -64,6 +73,13 @@ resource database 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
     // Auto-pause is a false economy above development: the first request after a pause pays a
     // cold start of tens of seconds, which a service desk agent experiences as a broken product.
     autoPauseDelay: startsWith(sku.name, 'GP_S_') ? 60 : null
+
+    useFreeLimit: useFreeLimit ? true : null
+
+    // AutoPause, never BillOverUsage. The difference is the whole point: on exhaustion the
+    // database stops answering until the allowance resets, so an environment that was set up to
+    // be free cannot quietly start charging because somebody left a load test running.
+    freeLimitExhaustionBehavior: useFreeLimit ? 'AutoPause' : null
   }
 }
 

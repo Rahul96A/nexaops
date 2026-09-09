@@ -37,6 +37,33 @@ because two replicas with private caches will disagree.
 ''')
 param deployCache bool = environment == 'prod'
 
+@description('''
+Deploy Service Bus.
+
+Off below production. IEventPublisher reports itself unconfigured without it and the product
+works exactly as before -- nothing in NexaOps consumes its own events yet; the namespace exists
+for out-of-process consumers a customer adds later. A Standard namespace carries a standing
+monthly charge for a queue nobody is reading.
+''')
+param deployMessaging bool = environment == 'prod'
+
+@description('''
+Use the Azure SQL free offer where the sizing allows it.
+
+Caps the environment at no cost: the database pauses when the monthly allowance is used up
+rather than billing for the overage. One free database per subscription, so only one environment
+can take it.
+''')
+param useSqlFreeLimit bool = false
+
+@description('''
+Deploy an Azure Container Registry.
+
+ACR has no free tier -- Basic carries a standing monthly charge -- so a free environment pulls a
+public image from GitHub Container Registry instead and needs no registry of its own.
+''')
+param deployRegistry bool = true
+
 @description('Deploy Front Door and API Management. Usually production only.')
 param deployEdgeServices bool = environment == 'prod'
 
@@ -205,6 +232,7 @@ module sql 'modules/sql.bicep' = {
     backupStorageRedundancy: size.sqlBackupStorage
     logAnalyticsWorkspaceId: observability.outputs.logAnalyticsId
     enableLongTermRetention: environment == 'prod'
+    useFreeLimit: useSqlFreeLimit
   }
 }
 
@@ -220,7 +248,7 @@ module storage 'modules/storage.bicep' = {
   }
 }
 
-module serviceBus 'modules/servicebus.bicep' = {
+module serviceBus 'modules/servicebus.bicep' = if (deployMessaging) {
   name: 'servicebus'
   params: {
     location: location
@@ -261,7 +289,7 @@ module ai 'modules/ai.bicep' = if (deployAiServices) {
 // Compute
 // ---------------------------------------------------------------------------
 
-module registry 'modules/registry.bicep' = {
+module registry 'modules/registry.bicep' = if (deployRegistry) {
   name: 'registry'
   params: {
     location: location
@@ -281,7 +309,7 @@ module containerApp 'modules/containerapp.bicep' = {
     appName: names.apiContainerApp
     identityId: apiIdentity.id
     identityClientId: apiIdentity.properties.clientId
-    registryLoginServer: registry.outputs.loginServer
+    registryLoginServer: deployRegistry ? registry!.outputs.loginServer : ''
     containerImage: containerImage
     logAnalyticsCustomerId: observability.outputs.logAnalyticsCustomerId
     logAnalyticsSharedKey: observability.outputs.logAnalyticsSharedKey
@@ -289,7 +317,9 @@ module containerApp 'modules/containerapp.bicep' = {
     keyVaultUri: keyVault.outputs.uri
     sqlConnectionString: sql.outputs.connectionString
     blobServiceUri: storage.outputs.blobServiceUri
-    serviceBusNamespace: serviceBus.outputs.fullyQualifiedNamespace
+    // Safe dereference: a conditional module is null until it is deployed, and an empty
+    // namespace is exactly how the publisher reports itself unconfigured.
+    serviceBusNamespace: deployMessaging ? serviceBus!.outputs.fullyQualifiedNamespace : ''
     // Safe dereference: a conditional module is null until it is actually deployed, so a
     // plain property access here would fail template validation before anything is created.
     openAiEndpoint: ai.?outputs.openAiEndpoint ?? ''
@@ -329,7 +359,8 @@ module edge 'modules/edge.bicep' = if (deployEdgeServices) {
 
 output apiUrl string = 'https://${containerApp.outputs.fqdn}'
 output publicUrl string = edge.?outputs.frontDoorEndpoint ?? 'https://${containerApp.outputs.fqdn}'
-output containerRegistryLoginServer string = registry.outputs.loginServer
+// Empty when the environment pulls a public image and has no registry of its own.
+output containerRegistryLoginServer string = deployRegistry ? registry!.outputs.loginServer : ''
 output containerAppName string = names.apiContainerApp
 output managedIdentityClientId string = apiIdentity.properties.clientId
 output managedIdentityPrincipalId string = apiIdentity.properties.principalId

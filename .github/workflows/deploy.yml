@@ -25,12 +25,19 @@ env:
   DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
   AZURE_RESOURCE_GROUP_PREFIX: rg-nexaops
 
+  # Lower-cased because a container image reference must be, and the owner name is not.
+  IMAGE_REPOSITORY: ghcr.io/rahul96a/nexaops-api
+
 # Federated credentials rather than a stored service principal secret: the workflow exchanges a
 # short-lived GitHub OIDC token for an Azure token, so there is no long-lived credential in
 # repository secrets to leak or rotate.
 permissions:
   id-token: write
   contents: read
+
+  # Images go to GitHub Container Registry rather than Azure Container Registry: ACR has no free
+  # tier, and ghcr is free for a public repository.
+  packages: write
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -117,7 +124,11 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Sign in to the container registry
-        run: az acr login --name ${{ secrets.ACR_NAME }}
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       # Required by the cache-to below. The runner's default builder uses the "docker" driver,
       # which cannot export a cache, so the build failed outright with "Cache export is not
@@ -133,8 +144,8 @@ jobs:
           file: src/NexaOps.Api/Dockerfile
           push: true
           tags: |
-            ${{ secrets.ACR_NAME }}.azurecr.io/nexaops-api:${{ steps.version.outputs.tag }}
-            ${{ secrets.ACR_NAME }}.azurecr.io/nexaops-api:latest
+            ${{ env.IMAGE_REPOSITORY }}:${{ steps.version.outputs.tag }}
+            ${{ env.IMAGE_REPOSITORY }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
@@ -249,7 +260,7 @@ jobs:
           az containerapp update \
             --name ${{ steps.deploy.outputs.containerAppName }} \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP_PREFIX }}-dev \
-            --image ${{ secrets.ACR_NAME }}.azurecr.io/nexaops-api:${{ needs.build.outputs.imageTag }}
+            --image ${{ env.IMAGE_REPOSITORY }}:${{ needs.build.outputs.imageTag }}
 
       - name: Smoke test
         run: |
@@ -348,7 +359,7 @@ jobs:
           az containerapp update \
             --name ${{ steps.deploy.outputs.containerAppName }} \
             --resource-group ${{ env.AZURE_RESOURCE_GROUP_PREFIX }}-prod \
-            --image ${{ secrets.ACR_NAME }}.azurecr.io/nexaops-api:${{ needs.build.outputs.imageTag }}
+            --image ${{ env.IMAGE_REPOSITORY }}:${{ needs.build.outputs.imageTag }}
 
       - name: Smoke test
         run: |
