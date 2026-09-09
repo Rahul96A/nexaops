@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using NexaOps.Application.Administration;
+using NexaOps.Application.Platform;
 using NexaOps.Application.Ai;
 using NexaOps.Application.Ai.Tools;
 using NexaOps.Application.Changes;
@@ -46,6 +47,11 @@ public static class DependencyInjection
 
         // Asset management.
         services.AddScoped<IAssetService, AssetService>();
+
+        // Platform administration: the operator's view of their customers. Separate from the
+        // block below on purpose - administering the platform and administering a tenant are
+        // different jobs, gated by different permissions.
+        services.AddScoped<ITenantOnboardingService, TenantOnboardingService>();
 
         // Administration: the tenant's own configuration.
         services.AddScoped<IUserAdminService, UserAdminService>();

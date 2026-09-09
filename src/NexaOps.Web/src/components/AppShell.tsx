@@ -37,6 +37,7 @@ import DevicesOtherOutlinedIcon from '@mui/icons-material/DevicesOtherOutlined';
 import AutoModeOutlinedIcon from '@mui/icons-material/AutoModeOutlined';
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import ApartmentOutlinedIcon from '@mui/icons-material/ApartmentOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
 import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined';
@@ -172,6 +173,20 @@ const NAVIGATION: NavSection[] = [
         to: '/settings',
         icon: <SettingsOutlinedIcon />,
         permission: Permissions.categoryRead,
+      },
+    ],
+  },
+  {
+    // The service provider's own tools, not the customer's. The permission gate means this
+    // whole section is absent for everybody signed in to a customer tenant, which is why it can
+    // sit in the same navigation without confusing anyone.
+    heading: 'Platform',
+    items: [
+      {
+        label: 'Customers',
+        to: '/platform/customers',
+        icon: <ApartmentOutlinedIcon />,
+        permission: Permissions.platformTenantRead,
       },
     ],
   },

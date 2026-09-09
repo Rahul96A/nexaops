@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NexaOps.Application.Abstractions;
+using NexaOps.Application.Platform;
 using NexaOps.Application.Security;
 using NexaOps.Domain.Identity;
 using NexaOps.Domain.Localisation;
@@ -36,7 +37,8 @@ public sealed class DemoDataSeeder
     private const string DemoPassword = "NexaOps#Demo2026";
 
     private readonly NexaOpsDbContext _context;
-    private readonly TenantProvisioningService _provisioning;
+    private readonly ITenantProvisioner _provisioning;
+    private readonly ICredentialService _credentials;
     private readonly IDateTimeProvider _clock;
     private readonly IConfiguration _configuration;
     private readonly ILogger<DemoDataSeeder> _logger;
@@ -44,13 +46,15 @@ public sealed class DemoDataSeeder
 
     public DemoDataSeeder(
         NexaOpsDbContext context,
-        TenantProvisioningService provisioning,
+        ITenantProvisioner provisioning,
+        ICredentialService credentials,
         IDateTimeProvider clock,
         IConfiguration configuration,
         ILogger<DemoDataSeeder> logger)
     {
         _context = context;
         _provisioning = provisioning;
+        _credentials = credentials;
         _clock = clock;
         _configuration = configuration;
         _logger = logger;
@@ -88,6 +92,7 @@ public sealed class DemoDataSeeder
             // check against the neighbour silently became a permission check instead.
             await SeedPrimaryTenantAsync(primary, cancellationToken).ConfigureAwait(false);
             await SeedSecondaryTenantAsync(cancellationToken).ConfigureAwait(false);
+            await SeedPlatformTenantAsync(cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -250,7 +255,7 @@ public sealed class DemoDataSeeder
                 CreatedAt = now
             };
 
-            user.PasswordHash = _provisioning.HashPassword(user, DemoPassword);
+            user.PasswordHash = _credentials.Hash(user, DemoPassword);
 
             _context.Users.Add(user);
             users[person.Alias] = user;
@@ -324,6 +329,104 @@ public sealed class DemoDataSeeder
         // --- Incidents ----------------------------------------------------
         await SeedIncidentsAsync(tenant.Id, organization.Id, users, groupsByCode, categories, cancellationToken)
             .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The service provider's own tenant: NexaOps itself, with one operator who holds the
+    /// platform-scoped role.
+    /// <para>
+    /// Separate from the customer tenants on purpose. The platform role is provisioned into
+    /// every tenant, so an operator could technically live inside Acme — but then a demo would
+    /// show "Platform / Customers" in a customer's navigation, which is exactly the confusion
+    /// the tenant boundary exists to prevent. Signing in here shows the operator's view; signing
+    /// in as anybody at Acme shows that the section is not merely disabled but absent.
+    /// </para>
+    /// </summary>
+    private async Task SeedPlatformTenantAsync(CancellationToken cancellationToken)
+    {
+        var tenant = await _provisioning.ProvisionAsync(
+            new TenantProvisioningRequest
+            {
+                Code = "nexaops-platform",
+                Name = "NexaOps",
+                LegalName = "NexaOps Technologies Private Limited",
+                PrimaryDomain = "nexaops.example.in"
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        if (await _context.Users.AnyAsync(u => u.TenantId == tenant.Id, cancellationToken)
+                .ConfigureAwait(false))
+        {
+            return;
+        }
+
+        var now = _clock.UtcNow;
+
+        var organization = new Organization
+        {
+            TenantId = tenant.Id,
+            Code = "NEXAOPS",
+            Name = "NexaOps",
+            LegalName = "NexaOps Technologies Private Limited",
+            AddressLine1 = "Prestige Tech Park, Marathahalli",
+            City = "Bengaluru",
+            StateCode = "KA",
+            PostalCode = "560103",
+            CountryCode = IndiaReference.CountryCode,
+            ContactEmail = "operations@nexaops.example.in",
+            CreatedAt = now
+        };
+
+        _context.Organizations.Add(organization);
+
+        var department = CreateDepartment(tenant.Id, organization.Id, "OPS", "Platform Operations", "NX-1001");
+        _context.Departments.Add(department);
+
+        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        var roles = await _context.Roles
+            .Where(r => r.TenantId == tenant.Id)
+            .ToDictionaryAsync(r => r.Code, cancellationToken)
+            .ConfigureAwait(false);
+
+        var operatorUser = new User
+        {
+            TenantId = tenant.Id,
+            Email = "nandini.iyer@nexaops.example.in",
+            FirstName = "Nandini",
+            LastName = "Iyer",
+            DisplayName = "Nandini Iyer",
+            JobTitle = "Platform Operations Lead",
+            OrganizationId = organization.Id,
+            DepartmentId = department.Id,
+            EmployeeId = "NX0001",
+            Location = "Bengaluru",
+            Status = UserStatus.Active,
+            AvatarColor = AvatarColour("nandini.iyer"),
+            CreatedAt = now
+        };
+
+        operatorUser.PasswordHash = _credentials.Hash(operatorUser, DemoPassword);
+        _context.Users.Add(operatorUser);
+        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // The platform role only. Deliberately not tenant administration as well: the operator
+        // administers the platform, and giving them the customer-facing role too would blur the
+        // one distinction this tenant exists to demonstrate.
+        if (roles.TryGetValue(SystemRoles.PlatformAdministrator, out var platformRole))
+        {
+            _context.UserRoles.Add(new UserRole
+            {
+                TenantId = tenant.Id,
+                UserId = operatorUser.Id,
+                RoleId = platformRole.Id,
+                CreatedAt = now
+            });
+        }
+
+        await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        _logger.LogInformation("Provisioned the platform tenant with one operator.");
     }
 
     /// <summary>
@@ -403,7 +506,7 @@ public sealed class DemoDataSeeder
             CreatedAt = now
         };
 
-        agent.PasswordHash = _provisioning.HashPassword(agent, DemoPassword);
+        agent.PasswordHash = _credentials.Hash(agent, DemoPassword);
         _context.Users.Add(agent);
         await _context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 

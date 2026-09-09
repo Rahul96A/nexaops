@@ -1,6 +1,7 @@
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NexaOps.Application.Abstractions;
+using NexaOps.Application.Platform;
 using NexaOps.Application.Security;
 using NexaOps.Domain.Identity;
 using NexaOps.Domain.Localisation;
@@ -9,41 +10,26 @@ using NexaOps.Domain.ServiceDesk;
 using NexaOps.Domain.Sla;
 using NexaOps.Infrastructure.Persistence;
 
-namespace NexaOps.Api.Seeding;
+namespace NexaOps.Infrastructure.Provisioning;
 
-/// <summary>
-/// Stands up everything a new tenant needs before anyone can use it: roles and permission
-/// grants, the priority matrix, business calendars, SLA definitions and policies, the incident
-/// taxonomy, and record number sequences.
-/// <para>
-/// This runs for every customer, not only for demos. It is idempotent, so re-running it after a
-/// release that adds a permission or an SLA target tops the tenant up without disturbing
-/// anything an administrator has customised.
-/// </para>
-/// </summary>
-public sealed class TenantProvisioningService
+/// <inheritdoc />
+public sealed class TenantProvisioningService : ITenantProvisioner
 {
     private readonly NexaOpsDbContext _context;
-    private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IDateTimeProvider _clock;
     private readonly ILogger<TenantProvisioningService> _logger;
 
     public TenantProvisioningService(
         NexaOpsDbContext context,
-        IPasswordHasher<User> passwordHasher,
         IDateTimeProvider clock,
         ILogger<TenantProvisioningService> logger)
     {
         _context = context;
-        _passwordHasher = passwordHasher;
         _clock = clock;
         _logger = logger;
     }
 
-    /// <summary>
-    /// Creates the tenant if it does not exist and provisions its baseline configuration.
-    /// Returns the tenant, whether it was newly created or already present.
-    /// </summary>
+    /// <inheritdoc />
     public async Task<Tenant> ProvisionAsync(
         TenantProvisioningRequest request,
         CancellationToken cancellationToken = default)
@@ -529,18 +515,5 @@ public sealed class TenantProvisioningService
         _ => "P5 planning"
     };
 
-    /// <summary>Hashes a password for a seeded account.</summary>
-    internal string HashPassword(User user, string password) => _passwordHasher.HashPassword(user, password);
-
     private sealed record CalendarSet(Guid BusinessId, Guid AlwaysOnId);
-}
-
-/// <summary>Everything needed to stand up a tenant.</summary>
-public sealed class TenantProvisioningRequest
-{
-    public required string Code { get; init; }
-    public required string Name { get; init; }
-    public string? LegalName { get; init; }
-    public string? PrimaryDomain { get; init; }
-    public TenantStatus Status { get; init; } = TenantStatus.Active;
 }

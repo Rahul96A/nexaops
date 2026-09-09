@@ -44,6 +44,7 @@ const WorkflowEditorPage = lazy(() => import('@/features/workflows/WorkflowEdito
 const ReportsPage = lazy(() => import('@/features/reports/ReportsPage').then((m) => ({ default: m.ReportsPage })));
 const SettingsPage = lazy(() => import('@/features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })));
 const AuditPage = lazy(() => import('@/features/audit/AuditPage').then((m) => ({ default: m.AuditPage })));
+const TenantsPage = lazy(() => import('@/features/platform/TenantsPage').then((m) => ({ default: m.TenantsPage })));
 
 
 const COLOR_MODE_KEY = 'nexaops.colorMode';
@@ -300,6 +301,20 @@ export function App() {
             element={
               <RequireAuth permission={Permissions.auditRead}>
                 <AuditPage />
+              </RequireAuth>
+            }
+          />
+
+          {/*
+            Platform administration. Gated on a permission no customer can hold, so a tenant
+            administrator who guesses the URL gets the same refusal as anybody else - and the
+            API refuses them again regardless of what this route decides.
+          */}
+          <Route
+            path="platform/customers"
+            element={
+              <RequireAuth permission={Permissions.platformTenantRead}>
+                <TenantsPage />
               </RequireAuth>
             }
           />

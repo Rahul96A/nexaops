@@ -442,7 +442,6 @@ builder.Services.AddHealthChecks()
 // ---------------------------------------------------------------------
 // Background workers and seeding
 // ---------------------------------------------------------------------
-builder.Services.AddScoped<TenantProvisioningService>();
 builder.Services.AddScoped<DemoDataSeeder>();
 builder.Services.AddHostedService<SlaMonitorWorker>();
 builder.Services.AddHostedService<NotificationDispatchWorker>();

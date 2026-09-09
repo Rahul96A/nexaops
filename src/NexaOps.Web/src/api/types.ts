@@ -1611,3 +1611,54 @@ export interface VirtualAgentActionResult {
   recordNumber: string;
   recordId: string;
 }
+
+// ---------------------------------------------------------------------------
+// Platform administration
+// ---------------------------------------------------------------------------
+
+export type TenantStatus = 'Active' | 'Trial' | 'Suspended' | 'Closed';
+
+export interface TenantSummary {
+  id: string;
+  code: string;
+  name: string;
+  legalName?: string | null;
+  status: TenantStatus;
+  primaryDomain?: string | null;
+  dataRegion: string;
+  createdAt: string;
+  userCount: number;
+  activeUserCount: number;
+}
+
+export interface TenantDetail {
+  id: string;
+  code: string;
+  name: string;
+  legalName?: string | null;
+  status: TenantStatus;
+  primaryDomain?: string | null;
+  entraTenantId?: string | null;
+  timeZoneId: string;
+  locale: string;
+  currencyCode: string;
+  dateFormat: string;
+  dataRegion: string;
+  recordRetentionDays: number;
+  auditRetentionDays: number;
+  createdAt: string;
+  userCount: number;
+  activeUserCount: number;
+  lastSignInAt?: string | null;
+}
+
+/**
+ * The result of onboarding. `temporaryPassword` is present exactly once, in the response to the
+ * request that created the tenant, and is null under federated authentication.
+ */
+export interface TenantOnboardingResult {
+  tenant: TenantDetail;
+  administratorUserId: string;
+  administratorEmail: string;
+  temporaryPassword?: string | null;
+}

@@ -32,6 +32,8 @@ using NexaOps.Infrastructure.Common;
 using NexaOps.Infrastructure.Identity;
 using NexaOps.Infrastructure.Messaging;
 using NexaOps.Infrastructure.Notifications;
+using NexaOps.Application.Platform;
+using NexaOps.Infrastructure.Provisioning;
 using NexaOps.Infrastructure.Persistence;
 using NexaOps.Infrastructure.Persistence.Interceptors;
 using NexaOps.Infrastructure.Persistence.Repositories;
@@ -153,6 +155,11 @@ public static class DependencyInjection
         // Asset management.
         services.AddScoped<IAssetRepository, AssetRepository>();
         services.AddScoped<IAssetQueryService, AssetQueryService>();
+
+        // Platform administration. The only repository that reads and writes across tenants,
+        // and the tenant provisioner it stands a new customer up with.
+        services.AddScoped<IPlatformRepository, PlatformRepository>();
+        services.AddScoped<ITenantProvisioner, TenantProvisioningService>();
 
         // Administration.
         services.AddScoped<IAdministrationRepository, AdministrationRepository>();

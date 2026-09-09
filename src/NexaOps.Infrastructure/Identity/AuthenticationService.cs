@@ -148,6 +148,15 @@ public sealed class AuthenticationService : IAuthenticationService
             throw new AuthenticationFailedException("account_disabled");
         }
 
+        if (!await TenantAdmitsSignInAsync(user.TenantId, cancellationToken).ConfigureAwait(false))
+        {
+            // Checked after the password, deliberately. Refusing before it would let anybody
+            // discover which tenants are suspended by watching how quickly the failure comes
+            // back, and suspension is commercially sensitive.
+            await RecordFailureAsync(email, "tenant_not_active", user, cancellationToken).ConfigureAwait(false);
+            throw new AuthenticationFailedException("tenant_not_active");
+        }
+
         // Transparently upgrade a password hashed with older parameters.
         if (verification == PasswordVerificationResult.SuccessRehashNeeded)
         {
@@ -241,6 +250,14 @@ public sealed class AuthenticationService : IAuthenticationService
             if (!user.CanSignIn(now))
             {
                 throw new AuthenticationFailedException("account_disabled");
+            }
+
+            // Sign-in is not the only way in. Without this, suspending a tenant would stop new
+            // sign-ins while every user already holding a refresh token carried on renewing for
+            // its full lifetime - which is to say, suspension would not suspend anything.
+            if (!await TenantAdmitsSignInAsync(user.TenantId, cancellationToken).ConfigureAwait(false))
+            {
+                throw new AuthenticationFailedException("tenant_not_active");
             }
 
             stored.RevokedAt = now;
@@ -582,6 +599,28 @@ public sealed class AuthenticationService : IAuthenticationService
         }
     }
 
+    /// <summary>
+    /// Whether a tenant is open for business. Only <see cref="TenantStatus.Active"/> and
+    /// <see cref="TenantStatus.Trial"/> admit a sign-in; a suspended or closed tenant does not,
+    /// and neither does a tenant row that has gone missing.
+    /// <para>
+    /// This is what makes suspension a control rather than a label. It is enforced on both
+    /// sign-in and refresh, so the longest a suspended user can keep working is the remaining
+    /// life of the access token they already hold.
+    /// </para>
+    /// </summary>
+    private async Task<bool> TenantAdmitsSignInAsync(Guid tenantId, CancellationToken cancellationToken)
+    {
+        var status = await _context.Tenants
+            .AsNoTracking()
+            .Where(t => t.Id == tenantId)
+            .Select(t => (TenantStatus?)t.Status)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return status is TenantStatus.Active or TenantStatus.Trial;
+    }
+
     private async Task<List<Guid>> LoadTenantIdsByCodeAsync(string code, CancellationToken cancellationToken)
         => await _context.Tenants
             .AsNoTracking()
@@ -593,9 +632,13 @@ public sealed class AuthenticationService : IAuthenticationService
     private async Task<IReadOnlyList<TenantChoice>> LoadTenantChoicesAsync(
         List<Guid> tenantIds,
         CancellationToken cancellationToken)
+        // The same admitted set the sign-in check uses. Offering a suspended tenant as a choice
+        // would invite the user to pick the one door that is locked; previously only Closed was
+        // filtered here, which was narrower than what sign-in itself allows.
         => await _context.Tenants
             .AsNoTracking()
-            .Where(t => tenantIds.Contains(t.Id) && t.Status != TenantStatus.Closed)
+            .Where(t => tenantIds.Contains(t.Id)
+                        && (t.Status == TenantStatus.Active || t.Status == TenantStatus.Trial))
             .OrderBy(t => t.Name)
             .Select(t => new TenantChoice(t.Code, t.Name))
             .ToListAsync(cancellationToken)

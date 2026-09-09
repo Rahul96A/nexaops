@@ -6,6 +6,11 @@
  * than a security hole.
  */
 export const Permissions = {
+  // Platform, not tenant: held only by the service provider's own staff. A tenant
+  // administrator cannot be granted these, so anything gated on them is invisible to customers.
+  platformTenantRead: 'platform.tenant.read',
+  platformTenantManage: 'platform.tenant.manage',
+
   incidentRead: 'incident.read',
   incidentReadAll: 'incident.read.all',
   incidentCreate: 'incident.create',

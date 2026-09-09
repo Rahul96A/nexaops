@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NexaOps.Api.Seeding;
+using NexaOps.Application.Platform;
 using NexaOps.Application.Security;
 using NexaOps.Domain.Identity;
 using NexaOps.Domain.ServiceDesk;
@@ -58,7 +59,7 @@ public sealed class TestEnvironment : IAsyncLifetime
     private async Task<TenantFixture> ProvisionAsync(string code, string name, string domain)
     {
         using var scope = Factory.Services.CreateScope();
-        var provisioning = scope.ServiceProvider.GetRequiredService<TenantProvisioningService>();
+        var provisioning = scope.ServiceProvider.GetRequiredService<ITenantProvisioner>();
         var context = scope.ServiceProvider.GetRequiredService<NexaOpsDbContext>();
         var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<User>>();
 
@@ -162,6 +163,13 @@ public sealed class TestEnvironment : IAsyncLifetime
         var administrator = CreateUser(context, hasher, tenant.Id, organization.Id, department.Id,
             "administrator", "Sunita", "Deshmukh", domain);
 
+        // The service provider's own staff, holding the platform-scoped role. Provisioned into
+        // each fixture tenant because the boundary being tested is the permission, not the
+        // tenant: a platform operator signed into one tenant must be able to administer every
+        // tenant, and a tenant administrator in the same tenant must not.
+        var platformOperator = CreateUser(context, hasher, tenant.Id, organization.Id, department.Id,
+            "platform", "Rohan", "Bhatia", domain);
+
         await context.SaveChangesAsync();
 
         Assign(context, tenant.Id, manager.Id, roles[SystemRoles.ServiceDeskManager].Id);
@@ -169,6 +177,7 @@ public sealed class TestEnvironment : IAsyncLifetime
         Assign(context, tenant.Id, employee.Id, roles[SystemRoles.Requester].Id);
         Assign(context, tenant.Id, assetManager.Id, roles[SystemRoles.AssetManager].Id);
         Assign(context, tenant.Id, administrator.Id, roles[SystemRoles.TenantAdministrator].Id);
+        Assign(context, tenant.Id, platformOperator.Id, roles[SystemRoles.PlatformAdministrator].Id);
 
         foreach (var (userId, isLead) in new[] { (manager.Id, true), (agent.Id, false) })
         {
@@ -197,7 +206,8 @@ public sealed class TestEnvironment : IAsyncLifetime
             new TestUser(agent.Id, agent.Email, "Kavya Nair"),
             new TestUser(employee.Id, employee.Email, "Aditya Menon"),
             new TestUser(assetManager.Id, assetManager.Email, "Vikram Iyer"),
-            new TestUser(administrator.Id, administrator.Email, "Sunita Deshmukh"));
+            new TestUser(administrator.Id, administrator.Email, "Sunita Deshmukh"),
+            new TestUser(platformOperator.Id, platformOperator.Email, "Rohan Bhatia"));
     }
 
     private static User CreateUser(
@@ -334,6 +344,7 @@ public sealed class TestEnvironment : IAsyncLifetime
 /// <param name="Employee">An ordinary employee with the requester role only.</param>
 /// <param name="AssetManager">Holds asset and licence administration.</param>
 /// <param name="Administrator">Tenant administrator: directory, roles and configuration.</param>
+/// <param name="PlatformOperator">Service-provider staff holding the platform-scoped role.</param>
 public sealed record TenantFixture(
     Guid TenantId,
     string Code,
@@ -351,7 +362,10 @@ public sealed record TenantFixture(
     TestUser AssetManager,
 
     /// <summary>Tenant administrator: the directory, roles and tenant configuration.</summary>
-    TestUser Administrator);
+    TestUser Administrator,
+
+    /// <summary>Holds the platform-scoped role: administers the platform, not just this tenant.</summary>
+    TestUser PlatformOperator);
 
 /// <param name="Id">User identifier.</param>
 /// <param name="Email">Sign-in address.</param>
