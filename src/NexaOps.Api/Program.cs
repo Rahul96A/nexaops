@@ -491,6 +491,40 @@ else
 }
 
 app.UseHttpsRedirection();
+
+// The single-page application, served from this same origin.
+//
+// Same origin is the whole point: the client calls /api/v1/... with relative paths, so there is
+// no base URL to configure, no CORS policy to get wrong, and no second host to secure. The cost
+// is that the API image carries the front end, which for one container is a fair trade.
+//
+// Only runs when the files are actually present. In development the front end is served by Vite
+// with its own proxy, and this must not interfere.
+var spaRoot = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+var hasSpa = Directory.Exists(spaRoot) && File.Exists(Path.Combine(spaRoot, "index.html"));
+
+if (hasSpa)
+{
+    app.UseDefaultFiles();
+
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        OnPrepareResponse = context =>
+        {
+            var path = context.File.Name;
+
+            // Vite writes a content hash into every asset file name, so a changed file is a
+            // changed URL. Those are immutable and cached for a year. index.html is not
+            // hashed -- it is the thing that points at the current hashes -- so it must never
+            // be cached, or a deploy would be invisible until the browser felt like checking.
+            context.Context.Response.Headers["Cache-Control"] =
+                path.Equals("index.html", StringComparison.OrdinalIgnoreCase)
+                    ? "no-cache, no-store, must-revalidate"
+                    : "public, max-age=31536000, immutable";
+        }
+    });
+}
+
 app.UseCors("NexaOpsSpa");
 app.UseRateLimiter();
 
@@ -514,6 +548,38 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
     Predicate = check => check.Tags.Contains("ready"),
     ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
 }).AllowAnonymous();
+
+if (hasSpa)
+{
+    // Client-side routing: a browser asking for /incidents/<id> must receive the application,
+    // which then reads the path itself.
+    //
+    // Explicitly excluded are /api and /health. Without that exclusion an unmatched API route
+    // would return index.html with a 200, so a caller with a typo in a URL would receive a page
+    // of HTML where they expected a 404 -- and a client parsing JSON would fail with something
+    // that looks nothing like the actual mistake.
+    // Anonymous, necessarily. The fallback serves the application shell -- HTML and JavaScript
+    // that contain no tenant data -- and it is what a browser receives when it asks for "/".
+    // Behind the default authorize-everything policy it returned 401, which meant the sign-in
+    // page could not be fetched without already being signed in: the application could not be
+    // opened at all. Every byte of data it goes on to request is authorised as it always was.
+    app.MapFallbackToFile("index.html").AllowAnonymous().Add(builder =>
+    {
+        var original = builder.RequestDelegate!;
+
+        builder.RequestDelegate = async context =>
+        {
+            if (context.Request.Path.StartsWithSegments("/api")
+                || context.Request.Path.StartsWithSegments("/health"))
+            {
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                return;
+            }
+
+            await original(context);
+        };
+    });
+}
 
 // ---------------------------------------------------------------------
 // Startup database work

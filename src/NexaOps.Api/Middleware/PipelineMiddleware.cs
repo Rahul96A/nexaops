@@ -125,8 +125,33 @@ public sealed class SecurityHeadersMiddleware
 
         // An API has no reason to be framed.
         headers["X-Frame-Options"] = "DENY";
-        headers["Content-Security-Policy"] =
-            "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
+
+        // Two policies, because this process serves two different things.
+        //
+        // Everything under /api and /health is JSON, and gets the strictest policy there is:
+        // nothing may load or execute at all. That is the right policy for a response that a
+        // browser should never render.
+        //
+        // Everything else is the single-page application, which cannot run under
+        // default-src 'none' — it would block its own scripts. It gets a policy scoped to what
+        // it actually needs and nothing more: its own bundles, its own styles plus the inline
+        // styles Emotion generates at runtime, Google Fonts, and API calls to its own origin.
+        // No 'unsafe-eval', and no wildcard anywhere.
+        var isApi = context.Request.Path.StartsWithSegments("/api")
+                    || context.Request.Path.StartsWithSegments("/health");
+
+        headers["Content-Security-Policy"] = isApi
+            ? "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+            : "default-src 'self'; "
+              + "script-src 'self'; "
+
+              // Emotion, which MUI styles with, injects rules into a <style> tag at runtime.
+              // There is no nonce to attach because the injection happens in the browser.
+              + "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+              + "font-src 'self' https://fonts.gstatic.com; "
+              + "img-src 'self' data:; "
+              + "connect-src 'self'; "
+              + "frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
 
         headers["Referrer-Policy"] = "no-referrer";
         headers["Cross-Origin-Resource-Policy"] = "same-site";
@@ -135,7 +160,12 @@ public sealed class SecurityHeadersMiddleware
         headers["Permissions-Policy"] = "accelerometer=(), camera=(), geolocation=(), microphone=(), payment=()";
 
         // Never let a proxy or browser cache an authenticated API response.
-        if (!headers.ContainsKey("Cache-Control"))
+        //
+        // Applied to the API only. The SPA's bundles carry a content hash in their file names,
+        // so they are safe to cache hard and expensive not to — no-store would re-download the
+        // whole application on every navigation. Their caching is set by the static file
+        // handler; index.html deliberately is not cached, so a deploy is picked up immediately.
+        if (isApi && !headers.ContainsKey("Cache-Control"))
         {
             headers["Cache-Control"] = "no-store, no-cache, must-revalidate";
         }

@@ -5,6 +5,26 @@
 # build-time secret - which is both smaller and a materially smaller attack surface.
 
 # ---------------------------------------------------------------------------
+# Front end
+# ---------------------------------------------------------------------------
+# Built in its own stage so the Node toolchain never reaches the runtime image, and so an
+# ordinary C# edit does not reinstall npm packages: this layer stays cached until the lock file
+# changes.
+FROM node:22-alpine AS web
+
+WORKDIR /web
+
+COPY ["src/NexaOps.Web/package.json", "src/NexaOps.Web/package-lock.json", "./"]
+
+# npm ci, not npm install: it installs exactly what the lock file says and fails if the two
+# disagree, which is what makes the image reproducible.
+RUN npm ci
+
+COPY ["src/NexaOps.Web/", "./"]
+
+RUN npm run build
+
+# ---------------------------------------------------------------------------
 # Build
 # ---------------------------------------------------------------------------
 FROM mcr.microsoft.com/dotnet/sdk:10.0-noble AS build
@@ -33,6 +53,10 @@ RUN dotnet publish "src/NexaOps.Api/NexaOps.Api.csproj" \
     --output /app/publish \
     -p:Version="$VERSION" \
     -p:UseAppHost=false
+
+# The compiled single-page application, served by the API from the same origin. Copied after
+# publish so that rebuilding the front end does not invalidate the .NET layers, or the reverse.
+COPY --from=web /web/dist /app/publish/wwwroot
 
 # ---------------------------------------------------------------------------
 # Runtime
