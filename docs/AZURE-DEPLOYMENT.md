@@ -142,6 +142,34 @@ separator, so this surfaces as `Auth:SigningKey`. It refuses to start without it
 
 If `Auth:Mode` is `EntraId`, no signing key is needed at all — Entra issues the tokens.
 
+### The step Bicep cannot do
+
+**The managed identity needs a database user, and no ARM template can create one.** Granting the
+identity a role on the SQL *server* is an ARM operation; creating a principal *inside the
+database* is a data-plane operation that only a SQL connection can perform.
+
+Skip it and the deployment appears to succeed. The container starts, listens, and then fails
+readiness for what looks like a database outage. The actual error is in the container logs:
+
+```
+Microsoft.Data.SqlClient.SqlException: Login failed for user '<token-identified principal>'.
+```
+
+Run this once per environment, connected as a member of the SQL administrator group:
+
+```sql
+CREATE USER [id-nexaops-dev-api] FROM EXTERNAL PROVIDER;
+ALTER ROLE db_datareader ADD MEMBER [id-nexaops-dev-api];
+ALTER ROLE db_datawriter ADD MEMBER [id-nexaops-dev-api];
+```
+
+The user name is the managed identity's resource name. Reader and writer only: the application
+never changes the schema, because migrations run as their own pipeline step.
+
+`sqlcmd` 15 cannot pass an Entra access token, so connect with a client that can — PowerShell
+setting `SqlConnection.AccessToken` from `az account get-access-token --resource https://database.windows.net/`
+is the shortest route on a workstation.
+
 ---
 
 ## 5. The pipeline

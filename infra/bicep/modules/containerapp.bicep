@@ -171,12 +171,19 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'Environment__Label', value: environmentLabel }
           ]
 
+          // Every probe sets timeoutSeconds explicitly. The platform default is one second,
+          // which is far too short for the readiness check: it opens a SQL connection that has
+          // to acquire an Entra token first, and on a cold start that alone exceeds a second.
+          // Left at the default, readiness fails with "A task was canceled" at 999ms every
+          // time and the revision never becomes ready — a failure that looks like a broken
+          // database and is really a broken probe.
           probes: [
             {
               type: 'Liveness'
               httpGet: { path: '/health/live', port: 8080 }
               initialDelaySeconds: 10
               periodSeconds: 30
+              timeoutSeconds: 5
               failureThreshold: 3
             }
             {
@@ -186,13 +193,18 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
               httpGet: { path: '/health/ready', port: 8080 }
               initialDelaySeconds: 5
               periodSeconds: 15
+              timeoutSeconds: 15
               failureThreshold: 3
             }
             {
+              // Liveness only, so startup is not gated on the database being reachable. A
+              // replica that is up but cannot see SQL should report itself unready, not be
+              // killed and restarted in a loop.
               type: 'Startup'
               httpGet: { path: '/health/live', port: 8080 }
               initialDelaySeconds: 5
               periodSeconds: 5
+              timeoutSeconds: 5
               failureThreshold: 30
             }
           ]

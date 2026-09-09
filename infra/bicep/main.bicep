@@ -43,6 +43,15 @@ param deployEdgeServices bool = environment == 'prod'
 @description('Custom domain served by Front Door. Empty uses the default endpoint host name.')
 param customDomain string = ''
 
+@description('''
+Full image reference for the API, e.g. myregistry.azurecr.io/nexaops-api:1.0.0.
+
+Empty provisions on a public placeholder so an environment can be created before anything has
+been built -- the registry has to exist before an image can be pushed to it. The deploy pipeline
+supplies the real reference on every release.
+''')
+param containerImage string = ''
+
 @description('Tags applied to every resource.')
 param tags object = {
   workload: workload
@@ -273,6 +282,7 @@ module containerApp 'modules/containerapp.bicep' = {
     identityId: apiIdentity.id
     identityClientId: apiIdentity.properties.clientId
     registryLoginServer: registry.outputs.loginServer
+    containerImage: containerImage
     logAnalyticsCustomerId: observability.outputs.logAnalyticsCustomerId
     logAnalyticsSharedKey: observability.outputs.logAnalyticsSharedKey
     appInsightsConnectionString: observability.outputs.appInsightsConnectionString
