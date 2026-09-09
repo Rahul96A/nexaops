@@ -112,6 +112,13 @@ jobs:
       - name: Sign in to the container registry
         run: az acr login --name ${{ secrets.ACR_NAME }}
 
+      # Required by the cache-to below. The runner's default builder uses the "docker" driver,
+      # which cannot export a cache, so the build failed outright with "Cache export is not
+      # supported for the docker driver" -- the layer cache was not merely inactive, it stopped
+      # the image being built at all.
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
