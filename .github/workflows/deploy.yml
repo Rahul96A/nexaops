@@ -71,6 +71,13 @@ jobs:
           name: web-dist-${{ steps.version.outputs.tag }}
           path: src/NexaOps.Web/dist
 
+      # The EF tooling reads project.assets.json to work out what to build, and that file only
+      # exists after a restore. Without this step the bundle failed with NETSDK1004 on every
+      # run — a deploy path that had never once completed, while CI stayed green throughout
+      # because CI restores as part of its own build.
+      - name: Restore
+        run: dotnet restore NexaOps.slnx
+
       # The migration bundle is a self-contained executable that applies the schema. Producing
       # it here means the deployment step needs neither the SDK nor the source, and the exact
       # schema change can be reviewed as an artefact before it touches a database.
