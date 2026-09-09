@@ -46,6 +46,10 @@ HQ, Pune, Hyderabad, Gurugram, Chennai), ~420 incidents over the last two weeks.
 **Northwind Logistics India** — a second, smaller tenant that exists for one purpose: to
 demonstrate isolation against a neighbour that genuinely has data.
 
+**NexaOps** — the service provider's own tenant, holding one platform operator. It is what makes
+the onboarding script below possible, and it is deliberately a separate tenant rather than an
+operator sitting inside Acme: a customer must never see the platform's tools in their navigation.
+
 Password for every account: `NexaOps#Demo2026`
 
 | Sign in as | Role | Shows |
@@ -55,6 +59,7 @@ Password for every account: `NexaOps#Demo2026`
 | `kavya.nair@acmetech.example.in` | Service Desk Agent | Working the queue |
 | `aditya.menon@acmetech.example.in` | Requester | The employee's view |
 | `deepak.varma@northwind.example.in` | Other tenant | The neighbour |
+| `nandini.iyer@nexaops.example.in` | Platform operator | Onboarding and managing customers |
 
 All data is synthetic. `example.in` is a reserved domain that cannot receive mail. No real
 person's data is used.
@@ -164,7 +169,45 @@ dotnet test tests/NexaOps.Api.IntegrationTests --filter "FullyQualifiedName~Tena
 
 ---
 
-## 7. Script E — the AI assistant (2 minutes)
+## 7. Script E — onboarding a customer (3 minutes)
+
+The question behind this one is "how long until we are live?", and the answer is better shown
+than described.
+
+**Sign in as Nandini Iyer.** Note the **Platform** section at the bottom of the navigation.
+
+1. Open **Platform → Customers**. Four tenants, with how many people are active in each and when
+   they were onboarded.
+2. Click **Onboard customer**. Fill in a code, a name, and the first administrator's name and
+   email. Submit.
+3. The tenant appears immediately, and a dialog shows a one-time password.
+
+> Say: *"That created the tenant, its roles and permission grants, its priority matrix, its
+> business calendars including Indian public holidays, its SLA definitions and policies, its
+> record number sequences and its change advisory board. Then it created one administrator who
+> can do everything else from inside the product."*
+
+4. Sign out. Sign in as the new administrator using the one-time password.
+5. They are asked to change the password before anything else.
+
+> Say: *"That is not a formality. We generated that password, so we knew it. Forcing the change
+> is what stops our copy from working."*
+
+6. Show that their tenant is empty — no incidents, no people but themselves — then raise one
+   incident and watch it get INC0000001 and a priority derived from the matrix.
+7. **Look at their navigation.** There is no Platform section.
+
+> Say: *"They hold every permission that exists inside their tenant. The platform permissions are
+> not among them and cannot be granted to them from inside a tenant, so this is not a hidden menu
+> — the API refuses them too."*
+
+If the room asks about suspending a customer for non-payment, go back to Nandini and suspend one.
+It asks for a reason, records it in that customer's own audit trail, signs their users out and
+refuses their next sign-in.
+
+---
+
+## 8. Script F — the AI assistant (2 minutes)
 
 **This behaves differently depending on whether Azure OpenAI is configured. Know which one you
 are about to show.**
@@ -196,7 +239,7 @@ Demonstrate that: sign in as Aditya and ask the same question. Different answer,
 
 ---
 
-## 8. Questions you will be asked
+## 9. Questions you will be asked
 
 **"Is this a ServiceNow clone?"**
 No. The data model, UX, architecture and code are original. No ServiceNow source, schema,
@@ -225,21 +268,26 @@ Management is the first module on it. See [STATUS.md](STATUS.md) for what is nex
 
 ---
 
-## 9. What is not built — say this out loud
+## 10. What is not built — say this out loud
 
-Anything marked **"Later"** in the navigation. Specifically:
+Nothing in the navigation is marked "Later" any more; every entry works. An earlier version of
+this page told you to say that service requests, problems, changes, knowledge, the CMDB, assets,
+the workflow engine, reporting and the virtual agent were absent. They are all built. Do not read
+that list out.
 
-- Service requests and the service catalogue
-- Problem management
-- Change management and CAB
-- Knowledge base
-- CMDB and asset management
-- The visual workflow engine
-- Reporting and dashboard builder
-- Virtual agent / chat
-- Mobile applications
-- Email inbound (ticket creation from email)
-- Integrations (Teams, Slack, monitoring tools)
+What genuinely is not there:
+
+- **Mobile applications.** The web UI is responsive; there is no native client.
+- **Outbound integrations** — Teams, Slack, monitoring tools. Inbound email works; outbound
+  webhooks and provider connectors do not.
+- **No user interface for the integration surface.** Inbound email and machine credentials are
+  configured through the API only.
+- **No create form for problems or changes.** Both have full list and record pages, and every
+  other operation is available in the browser; raising one goes through the API. If the demo
+  needs a new problem or change, create it beforehand.
+- **Only incidents are seeded.** Requests, problems, changes, assets, the CMDB, knowledge and
+  workflows all work but start empty in a fresh environment. Populate anything you intend to
+  show before the room is watching.
 
 Also not built, and less obvious from the UI:
 
@@ -254,7 +302,7 @@ Also not built, and less obvious from the UI:
 
 ---
 
-## 10. If something goes wrong
+## 11. If something goes wrong
 
 **Sign-in fails after several attempts** — the lockout is 5 attempts, and the sign-in rate limit
 is 10 per 5 minutes per IP. Both are real security controls. Wait, or reseed.

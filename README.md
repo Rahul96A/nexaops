@@ -173,7 +173,7 @@ Every one of these passes on the current tree:
 
 ```bash
 dotnet build NexaOps.slnx -warnaserror   # 0 warnings, 0 errors
-dotnet test NexaOps.slnx                 # 692 tests
+dotnet test NexaOps.slnx                 # 717 tests
 cd src/NexaOps.Web && npm run typecheck   # clean
 cd src/NexaOps.Web && npm run lint        # clean
 cd src/NexaOps.Web && npm run test        # 38 tests

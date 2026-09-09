@@ -1,6 +1,6 @@
 # NexaOps — Testing
 
-**258 tests.** 220 .NET, 38 front end. All passing on the current tree.
+**755 tests.** 717 .NET, 38 front end. All passing on the current tree.
 
 The strategy is deliberately not "aim for a coverage percentage". It is: **test the things that
 would be catastrophic or expensive to get wrong, at the cheapest layer that can prove them.**
@@ -11,10 +11,10 @@ would be catastrophic or expensive to get wrong, at the cheapest layer that can 
 
 | Suite | Tests | Runs against | Takes |
 |---|---|---|---|
-| `NexaOps.Domain.Tests` | 113 | Nothing. Pure objects | < 1 s |
-| `NexaOps.Application.Tests` | 31 | Fakes | < 1 s |
-| `NexaOps.Api.IntegrationTests` | 76 | Real HTTP, real SQL Server | ~40 s |
-| `NexaOps.Web` (Vitest) | 38 | jsdom | ~3 s |
+| `NexaOps.Domain.Tests` | 376 | Nothing. Pure objects | < 1 s |
+| `NexaOps.Application.Tests` | 69 | Fakes | < 1 s |
+| `NexaOps.Api.IntegrationTests` | 272 | Real HTTP, real SQL Server | ~35 s |
+| `NexaOps.Web` (Vitest) | 38 | jsdom | ~5 s |
 
 ### Why the shape is this way
 
@@ -64,7 +64,7 @@ dotnet build NexaOps.slnx && dotnet test NexaOps.slnx && cd src/NexaOps.Web && n
 
 ---
 
-## 3. Domain tests — 113
+## 3. Domain tests — 376
 
 | File | Tests | Covers |
 |---|---|---|
@@ -186,7 +186,7 @@ Three assertions that encode product decisions rather than implementation:
 
 | Job | Does |
 |---|---|
-| Backend | Restore, build with warnings as errors, run all 220 tests against a SQL Server service container |
+| Backend | Restore, build with warnings as errors, run all 717 tests against a SQL Server service container |
 | Frontend | `npm ci`, typecheck, lint, test, build |
 | Infrastructure | `az bicep build` — **0 warnings required** |
 | Security | NuGet audit, `npm audit`, gitleaks over full history |

@@ -121,6 +121,43 @@ enforces it:
 > `An_agent_can_work_the_queue_but_not_reconfigure_the_service_desk`,
 > `No_customer_role_holds_a_platform_permission`.
 
+### The platform boundary
+
+Administering the platform and administering a tenant are different jobs, and the split is
+enforced in four independent places rather than by convention:
+
+| Where | What it does |
+|---|---|
+| `Permissions.Platform*` | The only permissions gating `/api/v1/platform/*`. No customer role holds one. |
+| `SystemRoles` | `TenantAdministrator` is seeded with every permission **except** those starting `platform.`, computed rather than listed, so a new platform permission is excluded automatically. |
+| `UserAdminService.SetRolesAsync` | Refuses to assign a role marked `IsPlatformScoped`, so a tenant administrator holding `role.manage` cannot promote anybody — including themselves — across the boundary. |
+| `TenantOnboardingService` | Demands the platform permission on every method, and refuses outright if the tenant administrator role it is about to grant is platform-scoped. |
+
+The last of those is defensive rather than reachable today. It exists because a future edit to
+`SystemRoles` that made the wrong role platform-scoped would hand every onboarded customer control
+of the platform, and would look exactly like a successful onboarding.
+
+> **Tested by:** `A_tenant_administrator_cannot_reach_platform_administration`,
+> `An_onboarded_administrator_cannot_administer_the_platform`,
+> `A_service_desk_manager_cannot_reach_platform_administration`,
+> `No_customer_role_holds_a_platform_permission`.
+
+### Tenant suspension
+
+A suspended or closed tenant admits no sign-in **and no token refresh**. Suspending also revokes
+the tenant's unexpired refresh tokens.
+
+The refresh check is the load-bearing one. Enforcing at sign-in alone would stop new sessions
+while everybody already signed in carried on renewing for the full refresh-token lifetime — which
+is to say, suspension would not suspend anything. With both, the ceiling on a suspension taking
+effect is the remaining life of an access token already issued: **30 minutes**. There is no
+mechanism that ends an in-flight access token sooner, and that limit is stated rather than
+designed around.
+
+The status is checked *after* the password is verified, not before. Checking first would let
+anybody discover which tenants are suspended by timing the failure, and which of a provider's
+customers have stopped paying is not public information.
+
 ### The UI is not a security boundary
 
 The front end hides actions a user cannot take, using the permission list in their profile.
@@ -230,8 +267,8 @@ Covered in full in [AI-ARCHITECTURE.md](AI-ARCHITECTURE.md). In summary:
 
 ## 7. Findings from building this
 
-Three genuine defects were found by the test suite during development and fixed. They are listed
-because "the tests pass" is only meaningful if the tests have ever caught anything.
+Genuine defects found during development and fixed. They are listed because "the tests pass" is
+only meaningful if the tests have ever caught anything.
 
 | Finding | Impact | Fix |
 |---|---|---|
@@ -243,6 +280,15 @@ A fourth was introduced and caught in the same session: assigning an `AsNoTracki
 definition to a navigation property made EF attempt to re-insert it, violating its primary key.
 That is why the clock now carries its own `BusinessCalendarId` rather than reaching through a
 navigation.
+
+**Later, while building tenant onboarding:** `TenantStatus` was enforced nowhere. A tenant marked
+`Suspended` behaved identically to an active one — its users signed in and worked normally. The
+only filter on the status anywhere excluded `Closed` tenants from the sign-in disambiguation list,
+and a user whose email address is unique to one tenant never reaches disambiguation, so even that
+did nothing for most people. Suspension was a column, not a control. This was not caught by a test
+because nothing could set the status in the first place: the field existed for a feature that had
+never been built. Now enforced at sign-in and at refresh, with the tenant's refresh tokens revoked
+on suspension.
 
 ---
 

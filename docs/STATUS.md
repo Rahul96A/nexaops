@@ -1,11 +1,12 @@
 # NexaOps — Status
 
-**As of 8 September 2026.** Phase 1 (platform foundation), Incident Management, Phase 2
+**As of 9 September 2026.** Phase 1 (platform foundation), Incident Management, Phase 2
 (Service Requests, Service Catalogue and Approvals) Phase 3 (Problem Management), Phase 4
 (Change Management and the CAB) Phase 5 (Knowledge Base), Phase 6 (CMDB),
 Phase 7 (Asset Management), Phase 8 (workflow automation), Phase 9 (reporting) and
-Phase 10 (tenant administration), Phase 11 (the virtual agent) and Phase 12 (the
-integration surface), plus a demo environment.
+Phase 10 (tenant administration), Phase 11 (the virtual agent), Phase 12 (the
+integration surface) and Phase 13 (platform administration and tenant onboarding), plus a demo
+environment.
 
 This document is written to be handed to someone who has to decide whether to rely on this. It
 lists what works, what does not, and what is deliberately absent — with the gaps in the same
@@ -18,7 +19,7 @@ detail as the achievements.
 | Gate | Result |
 |---|---|
 | `dotnet build NexaOps.slnx -warnaserror` | **0 warnings, 0 errors** |
-| `dotnet test NexaOps.slnx` | **692 passing** |
+| `dotnet test NexaOps.slnx` | **717 passing** |
 | `npm run typecheck` | Clean |
 | `npm run lint` | Clean |
 | `npm run test` | **38 passing** |
@@ -28,7 +29,7 @@ detail as the achievements.
 | `npm audit` | No advisories |
 | gitleaks (full history) | No secrets |
 
-730 tests total (376 domain, 69 application, 247 integration, 38 front end). Breakdown and
+755 tests total (376 domain, 69 application, 272 integration, 38 front end). Breakdown and
 strategy in [TESTING.md](TESTING.md).
 
 > Two of these gates were previously reported as passing when they were not. `dotnet build`
@@ -234,6 +235,58 @@ misleadingly populated.
 reporting, and any figure that would need status history (time in each state, backlog as at a
 past date). Reports read the whole tenant — there is no row-level scoping beyond an optional
 assignment-group filter, so `report.view` is a permission to see the tenant's aggregate position.
+
+### Platform administration and tenant onboarding — complete
+
+The module that decides whether the product can be sold. Before it, `TenantProvisioningService`
+was registered in dependency injection and called from exactly one place — the demo seeder — so
+signing a first customer meant writing code before they could sign in.
+
+Everything it needs was already modelled and none of it was reachable: `platform.tenant.read` and
+`platform.tenant.manage` were in the permission catalogue enforced nowhere, `Role.IsPlatformScoped`
+existed, `UserAdminService` already refused to let a tenant administrator assign a platform role,
+and the sign-in profile already carried `IsPlatformAdministrator`.
+
+- **One provisioning path, not two.** The demo seeder and a real onboarding call the same
+  `ITenantProvisioner`. A separate "real customer" routine would be exercised less and drift.
+- **Onboarding produces a tenant somebody can actually use**, not an empty row: roles and their
+  permission grants, the priority matrix, Indian business calendars with public holidays, SLA
+  definitions and policies, record number sequences and the change advisory board. An integration
+  test raises the new tenant's first incident, which exercises the number sequence, the matrix and
+  the policies in one call.
+- **The first administrator's password is shown once**, is never stored in the clear or written to
+  the audit trail, and the account requires a change at first sign-in — which is what stops the
+  operator's copy of it from working.
+- **Crossing tenants is something a service has to ask for.** `IPlatformRepository` is separate
+  from `IAdministrationRepository` so that reaching across tenants means taking that dependency
+  deliberately, rather than being something that could happen inside a repository a tenant-scoped
+  service already holds. It is the only place outside authentication that suppresses the tenant
+  filter.
+- **A tenant administrator holding every other permission in the product gets 403 from all of it**,
+  and so does an administrator onboarded by this feature. Both are asserted over real HTTP.
+- **Suspension is enforced, not decorative.** See the defect below.
+- **A platform operator cannot suspend the tenant they are signed in to.** There is no way back in
+  from outside the product.
+- **Suspending or closing requires a reason**, which lands in that customer's own audit trail, so
+  "why can nobody sign in" has a written answer without a support call.
+- **The tenant code cannot be changed.** It is absent from the update command entirely: it is
+  embedded in sign-in disambiguation, in support conversations and in whatever anyone has
+  bookmarked.
+- **Under federated authentication, onboarding refuses.** Creating the first administrator
+  requires issuing a local password, and Entra first-sign-in provisioning is not built — so the
+  alternative is reporting success and handing over a tenant nobody can enter.
+
+**The defect this found:** `TenantStatus` was enforced nowhere. A `Suspended` tenant's users
+signed in and worked normally. The only filter on it anywhere excluded `Closed` tenants from the
+sign-in disambiguation list — and a user whose email address is unique never reaches
+disambiguation, so even that did nothing for most people. Suspension was a label on a row. Sign-in
+and token refresh now both check it, and suspending revokes the tenant's refresh tokens, so the
+ceiling on a suspension taking effect is one access-token lifetime rather than one refresh-token
+lifetime.
+
+**Not built:** billing and metering, self-service sign-up, and platform impersonation — an
+operator can create, configure and suspend a tenant but cannot act inside one to reproduce a
+customer's problem.
 
 ### Tenant administration — complete
 
@@ -486,6 +539,9 @@ What is genuinely absent:
   API-only. Issuing an integration key means calling the API.
 - **Mobile applications.** The web UI is responsive; there is no native client.
 - **Outbound webhooks and provider connectors.**
+- **Billing, metering and self-service sign-up.** A customer is onboarded by the platform
+  operator; nothing counts seats or usage, and there is no way for a prospect to create their own
+  tenant.
 
 Problems and Changes have list and record pages; neither has a create form in the UI yet, so
 raising one goes through the API. Every other operation on them is available in the browser.
@@ -549,9 +605,9 @@ Grouped by how much they should worry you.
 
 | Limitation | Consequence |
 |---|---|
-| **Entra ID sign-in: token validation is complete, first-sign-in user provisioning is not** | Federated customers cannot onboard yet; local auth works fully |
+| **Entra ID sign-in: token validation is complete, first-sign-in user provisioning is not** | Federated customers cannot onboard yet; local auth works fully. Tenant onboarding refuses outright under federated authentication rather than creating a tenant nobody can enter |
 | **No SCIM** | User lifecycle is manual |
-| **Platform impersonation is designed, not implemented** | A platform admin cannot act inside a customer tenant |
+| **Platform impersonation is designed, not implemented** | A platform admin can create, configure and suspend a tenant, but cannot act *inside* one to reproduce a customer's problem |
 | **No cross-tenant platform reporting** | |
 | **English only** | `en-IN` is a formatting locale, not a translation. No i18n framework is wired in |
 | **No SMS or WhatsApp channel** | Matters more in India than email for field staff |
