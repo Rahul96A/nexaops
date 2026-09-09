@@ -114,6 +114,7 @@ export const Permissions = {
   reportExport: 'report.export',
 
   aiAssistantUse: 'ai.assistant.use',
+  aiAgentUse: 'ai.agent.use',
   aiActionConfirm: 'ai.action.confirm',
   aiManage: 'ai.manage',
 } as const;

@@ -60,7 +60,17 @@ public static class SystemRoles
         // this permission: holding it lets a user act on approvals addressed to them and on
         // nothing else. Line-manager approval means any employee may be an approver, so gating
         // it behind a role would strand requests whenever a manager lacked that role.
-        Permissions.ApprovalAct
+        Permissions.ApprovalAct,
+
+        // The virtual agent is the self-service front door, so everybody gets it. It reads
+        // published guidance and the caller's own records — exactly what they can already see —
+        // and the staff assistant, which reads across the queue, stays behind its own permission.
+        Permissions.AiAgentUse,
+
+        // Confirming an agent proposal creates an incident for yourself, which every employee
+        // can already do from the portal. This grants no new capability; it grants a second way
+        // to reach one they have.
+        Permissions.AiActionConfirm
     ];
 
     private static readonly string[] AgentPermissions =
@@ -81,7 +91,6 @@ public static class SystemRoles
         Permissions.CalendarRead,
         Permissions.ReportView,
         Permissions.AiAssistantUse,
-        Permissions.AiActionConfirm,
 
         // Request fulfilment is agent work, exactly as incident resolution is.
         Permissions.RequestReadAll,

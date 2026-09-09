@@ -42,11 +42,21 @@ internal static class AiToolJson
             ? value.GetBoolean()
             : null;
 
-    /// <summary>Parses an enum name case-insensitively, returning null for anything unrecognised.</summary>
+    /// <summary>
+    /// Parses an enum name case-insensitively, returning null for anything unrecognised.
+    /// <para>
+    /// The <c>IsDefined</c> check is load-bearing: <c>Enum.TryParse</c> accepts a numeric string,
+    /// so a model passing <c>"9"</c> as a priority would otherwise produce a Priority of 9 — a
+    /// value no member has, which then reaches a query and every view that switches on it.
+    /// </para>
+    /// </summary>
     public static TEnum? OptionalEnum<TEnum>(JsonElement root, string name) where TEnum : struct, Enum
     {
         var raw = OptionalString(root, name);
-        return raw is not null && Enum.TryParse<TEnum>(raw, ignoreCase: true, out var parsed)
+
+        return raw is not null
+               && Enum.TryParse<TEnum>(raw, ignoreCase: true, out var parsed)
+               && Enum.IsDefined(parsed)
             ? parsed
             : null;
     }

@@ -73,8 +73,15 @@ public static class DependencyInjection
         services.AddScoped<IAiTool, GetIncidentTool>();
         services.AddScoped<IAiTool, GetServiceDeskSummaryTool>();
 
+        // Self-service tools, for the employee-facing virtual agent. Read-only like the rest:
+        // the one thing the agent can cause to happen goes through a human confirmation.
+        services.AddScoped<IAiTool, SearchKnowledgeTool>();
+        services.AddScoped<IAiTool, GetMyRequestsTool>();
+        services.AddScoped<IAiTool, SearchCatalogTool>();
+
         services.AddScoped<IAiToolRegistry, AiToolRegistry>();
         services.AddScoped<IAiToolExecutor, AiToolExecutor>();
+        services.AddScoped<IVirtualAgentService, VirtualAgentService>();
         services.AddScoped<IAiAssistantService, AiAssistantService>();
 
         return services;

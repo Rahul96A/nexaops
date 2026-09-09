@@ -4,7 +4,8 @@
 (Service Requests, Service Catalogue and Approvals) Phase 3 (Problem Management), Phase 4
 (Change Management and the CAB) Phase 5 (Knowledge Base), Phase 6 (CMDB),
 Phase 7 (Asset Management), Phase 8 (workflow automation), Phase 9 (reporting) and
-Phase 10 (tenant administration), plus a demo environment.
+Phase 10 (tenant administration) and Phase 11 (the virtual agent), plus a demo
+environment.
 
 This document is written to be handed to someone who has to decide whether to rely on this. It
 lists what works, what does not, and what is deliberately absent — with the gaps in the same
@@ -17,7 +18,7 @@ detail as the achievements.
 | Gate | Result |
 |---|---|
 | `dotnet build NexaOps.slnx -warnaserror` | **0 warnings, 0 errors** |
-| `dotnet test NexaOps.slnx` | **620 passing** |
+| `dotnet test NexaOps.slnx` | **642 passing** |
 | `npm run typecheck` | Clean |
 | `npm run lint` | Clean |
 | `npm run test` | **38 passing** |
@@ -27,7 +28,7 @@ detail as the achievements.
 | `npm audit` | No advisories |
 | gitleaks (full history) | No secrets |
 
-658 tests total (344 domain, 55 application, 221 integration, 38 front end). Breakdown and
+680 tests total (344 domain, 69 application, 229 integration, 38 front end). Breakdown and
 strategy in [TESTING.md](TESTING.md).
 
 > Two of these gates were previously reported as passing when they were not. `dotnet build`
@@ -271,6 +272,46 @@ system settings, and subcategory editing — all still API-only. Administrator-i
 resets are not built either: the flow needs email delivery and a token, and half of one would be
 worse than none.
 
+### Virtual agent — complete
+
+An employee-facing agent, distinct from the staff assistant and not a wrapper around it. The
+assistant answers questions for people working a queue; this talks to somebody who has a problem,
+so it leads with published guidance and ends — when nothing else helped — with an offer to raise
+a ticket.
+
+- **The agent proposes; the person disposes.** It cannot create, change or close anything. A
+  proposal is a filled-in form returned in the response, editable before it is accepted, and the
+  ticket exists only once somebody presses the button. The architecture anticipated this — the
+  tool executor has always refused mutating tools — and this is the first module to use it.
+- **There is no server-side proposal store.** The confirmation carries the fields as shown on
+  screen, so an edited title is the title that gets filed and nothing stale can be resurrected.
+- **The confirmation runs without AI at all.** It calls the ordinary incident service as the
+  signed-in user, so their permissions, their tenant, the priority matrix, the SLA clocks and the
+  audit trail all apply. The agent is a different way in, not a different set of rules.
+- **A malformed proposal is no proposal.** The parser is forgiving in exactly one direction:
+  truncated JSON, a missing title, a non-object — all yield the reply and nothing else. A wrong
+  ticket raised on somebody's behalf is worse than no offer to raise one.
+- **An unrecognised urgency reads as Medium, never as the worst case.** A model writing "urgent"
+  must not thereby put somebody ahead of everyone else in the queue. `Enum.IsDefined` is checked
+  after parsing because `Enum.TryParse` accepts numeric strings — `"9"` would otherwise become an
+  urgency no member has.
+- **Citations come from tool results, not from the model's prose.** An article number the model
+  invented cannot become a link.
+- **Its own permission, held at baseline.** `ai.agent.use` is not `ai.assistant.use`: the
+  assistant reads across the queue and stays closed to employees, while the agent reads published
+  guidance and the caller's own records — exactly what they can already see. Sharing one
+  permission would have forced a choice between withholding self-service and handing employees
+  the staff tooling.
+- **Agent-raised tickets are audited as AI actions**, so somebody reviewing how a ticket came to
+  exist can see it began as a suggestion a person accepted.
+- Three new read-only tools — published knowledge, the caller's own requests, the catalogue.
+  "Mine" is resolved from the authenticated identity, never from an argument, so there is no
+  parameter for a model to hallucinate a user id into.
+
+**Not built:** the agent cannot raise a service request from the catalogue (it points at the item
+instead), cannot chase or update an existing ticket, and has no voice or third-party chat channel.
+Conversation history lives in the browser for the length of the session and is not stored.
+
 ### Knowledge Base — complete
 
 - **A stale article stays readable.** Withdrawing guidance the moment its review date passes
@@ -497,6 +538,8 @@ detail in [SECURITY.md §7](SECURITY.md) and [TESTING.md §9](TESTING.md).
 | `GroupBy` with a key reaching through a navigation | 500 on the dashboard workload panel |
 | Invalid sort field returned 409 | Wrong status; now 400 with field errors |
 | Audit row volume during seeding | Command timeouts. Fixed with batching and an audit-suppression scope |
+| An agent-raised ticket's audit entry was never committed | `IAuditService.Record` queues into the current unit of work, and the incident's own save had already happened — so the entry was written to nothing and "traceable to the agent" was untrue |
+| `Enum.TryParse` accepted numeric strings from the model | `"9"` parsed to an Urgency no member has, which would have travelled into an incident and out to every view that switches on it. Also fixed in the shared AI tool-argument helper |
 | The security stamp was cached for 60s and never evicted | Revoking a role, disabling an account or changing a password took up to a minute to bite, while the code claimed "immediately". The cache also used the tenant-prefixed key while validation runs before a tenant scope exists, so a naive eviction would have looked right and done nothing |
 | Deleting a role with permissions threw | The tracked grants were orphaned rather than cascaded; the delete returned 500 |
 | The workflow recursion guard guarded a path nothing reached | A rule's own action never re-entered the engine, so "automation does not trigger automation" was an untested claim. Actions now raise their corresponding trigger, which the guard refuses and records |
@@ -506,9 +549,9 @@ detail in [SECURITY.md §7](SECURITY.md) and [TESTING.md §9](TESTING.md).
 
 ## 7. Next implementation phase
 
-**Recommended: finishing the administration surface, then the virtual agent.**
+**Recommended: finishing the administration surface, then the integration surface.**
 
-Ten modules exist and a tenant can now be configured through the product for the things that
+Eleven modules exist and a tenant can now be configured through the product for the things that
 matter most — people, roles, teams and the taxonomy. What is left of administration is narrower
 but still forces a developer into the loop: SLA definitions, business calendars and holidays, and
 system settings.
@@ -517,8 +560,7 @@ Still to build, in the order they earn their place:
 
 1. **The rest of administration** — SLA definitions, calendars and holidays, system settings,
    organisations and departments, subcategory editing.
-2. **Virtual agent** on the existing grounded AI abstraction.
-3. **Integration surface** — inbound email, a mobile client, third-party connectors.
+2. **Integration surface** — inbound email, a mobile client, third-party connectors.
 4. **Scheduled and outcome-driven workflow triggers** — a timer, an approval outcome, an SLA
    breach. The engine's shape supports them; the triggers are not raised yet.
 5. **Scheduled and emailed reports**, and a report builder.

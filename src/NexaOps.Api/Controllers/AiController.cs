@@ -25,8 +25,13 @@ namespace NexaOps.Api.Controllers;
 public sealed class AiController : ControllerBase
 {
     private readonly IAiAssistantService _assistant;
+    private readonly IVirtualAgentService _agent;
 
-    public AiController(IAiAssistantService assistant) => _assistant = assistant;
+    public AiController(IAiAssistantService assistant, IVirtualAgentService agent)
+    {
+        _assistant = assistant;
+        _agent = agent;
+    }
 
     /// <summary>
     /// Whether AI is available in this environment and which tools the caller may use.
@@ -48,4 +53,46 @@ public sealed class AiController : ControllerBase
         [FromBody] AiAskRequest request,
         CancellationToken cancellationToken)
         => Ok(await _assistant.AskAsync(request, cancellationToken));
+
+    /// <summary>
+    /// The employee-facing virtual agent.
+    /// <para>
+    /// Answers from published knowledge and the caller's own records, and where nothing helps,
+    /// proposes raising a ticket. The proposal is a suggestion in the response — nothing is
+    /// created here.
+    /// </para>
+    /// </summary>
+    [HttpPost("agent/chat")]
+    [RequiresPermission(Permissions.AiAgentUse)]
+    [EnableRateLimiting("ai")]
+    [ProducesResponseType(typeof(VirtualAgentReplyDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+    public async Task<ActionResult<VirtualAgentReplyDto>> Chat(
+        [FromBody] VirtualAgentRequest request,
+        CancellationToken cancellationToken)
+        => Ok(await _agent.ChatAsync(request, cancellationToken));
+
+    /// <summary>
+    /// Acts on a proposal the person has confirmed.
+    /// <para>
+    /// Held behind its own permission, and deliberately not dependent on an AI provider being
+    /// configured: this endpoint calls the ordinary incident service as the signed-in user. The
+    /// model suggested the wording; the person decided, and the record is theirs.
+    /// </para>
+    /// <para>
+    /// The confirmation carries the fields as shown on screen rather than a reference to a
+    /// stored proposal, so somebody who edited the title gets the title they edited and there is
+    /// no server-side draft for a stale one to be resurrected from.
+    /// </para>
+    /// </summary>
+    [HttpPost("agent/confirm")]
+    [RequiresPermission(Permissions.AiActionConfirm)]
+    [ProducesResponseType(typeof(VirtualAgentActionResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<ActionResult<VirtualAgentActionResultDto>> Confirm(
+        [FromBody] ConfirmVirtualAgentActionCommand command,
+        CancellationToken cancellationToken)
+        => Ok(await _agent.ConfirmAsync(command, cancellationToken));
 }

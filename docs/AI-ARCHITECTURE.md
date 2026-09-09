@@ -220,13 +220,15 @@ this section.
 
 - **Retrieval-augmented generation.** `SearchEndpoint` and `SearchIndexName` options exist and
   the Bicep provisions Azure AI Search, but no index is populated and no retrieval tool is
-  registered. Knowledge-grounded answers arrive with the knowledge module.
+  registered. The virtual agent's `search_knowledge` tool is a keyword search over published
+  articles through the ordinary knowledge service — grounded, but not semantic.
 - **Embeddings.** The adapter exposes them and reports `embeddingsAvailable`, but nothing in the
   product generates or stores a vector yet.
-- **Mutating tools and the confirmation flow.** `IsMutating` is honoured everywhere — the
-  executor refuses, the descriptor list excludes — but no mutating tool exists, and the
-  human-confirmation UI is not built. This is the correct order: the refusal path exists before
-  anything can take it.
+- **Mutating tools.** `IsMutating` is honoured everywhere — the executor refuses, the descriptor
+  list excludes — and still no mutating tool exists. The virtual agent, which is the one part of
+  the product that can cause a record to appear, does not use one: it emits a proposal that a
+  person edits and confirms, and the confirmation calls the ordinary incident service outside the
+  model loop entirely. That is the shape any future action should take.
 - **Automatic categorisation, duplicate detection, resolution suggestions.** Not implemented. The
   assistant answers questions about data; it does not classify or predict.
 - **Per-tenant AI budgets and throttling.** Tokens are measured, not capped.

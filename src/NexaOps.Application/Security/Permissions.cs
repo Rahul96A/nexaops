@@ -336,6 +336,18 @@ public static class Permissions
     public const string AiAssistantUse = "ai.assistant.use";
 
     /// <summary>
+    /// Use the employee-facing virtual agent.
+    /// <para>
+    /// Distinct from <see cref="AiAssistantUse"/>, and held far more widely. The staff assistant
+    /// reads across the queue and is offered to people who work it; the virtual agent reads
+    /// published guidance and the caller's own records, which is what any employee can already
+    /// see. Sharing one permission would have forced a choice between withholding self-service
+    /// from employees and handing them the staff tooling.
+    /// </para>
+    /// </summary>
+    public const string AiAgentUse = "ai.agent.use";
+
+    /// <summary>
     /// Confirm an AI-proposed change to a record. Holding this does not bypass the underlying
     /// permission: an AI-proposed assignment still requires <see cref="IncidentAssign"/>.
     /// </summary>
@@ -466,6 +478,7 @@ public static class Permissions
         new(ReportExport, "Reporting", "Export reports", "Export report output to file."),
 
         new(AiAssistantUse, "AI", "Use AI assistant", "Ask the AI assistant questions grounded in tenant data."),
+        new(AiAgentUse, "AI", "Use the virtual agent", "Ask the employee-facing virtual agent for help."),
         new(AiActionConfirm, "AI", "Confirm AI actions", "Approve an AI-proposed change. Underlying permissions still apply."),
         new(AiManage, "AI", "Manage AI settings", "Configure AI providers, prompts and enabled tools.")
     ];

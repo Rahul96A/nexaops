@@ -47,6 +47,7 @@ import { initials } from '@/utils/format';
 import { NotificationBell } from '@/features/notifications/NotificationBell';
 import { GlobalSearch } from '@/features/search/GlobalSearch';
 import { AiAssistantButton } from '@/features/ai/AiAssistantButton';
+import { VirtualAgentButton } from '@/features/ai/VirtualAgentButton';
 
 const DRAWER_WIDTH = 248;
 
@@ -329,6 +330,12 @@ export function AppShell({
             />
           )}
 
+          {/*
+            Two entry points, not one. The assistant answers questions about the queue for the
+            people working it; the agent helps somebody who has a problem. Each hides itself when
+            the caller cannot use it, so most people see exactly one.
+          */}
+          <VirtualAgentButton />
           <AiAssistantButton />
           <NotificationBell />
 

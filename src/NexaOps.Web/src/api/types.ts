@@ -1581,3 +1581,33 @@ export interface CreatedUser {
   user: UserAdmin;
   temporaryPassword?: string | null;
 }
+
+// --- Virtual agent ---
+
+export type VirtualAgentActionKind = 'raise_incident';
+
+/** A suggestion, not an action. Nothing exists until the person confirms it. */
+export interface VirtualAgentProposal {
+  kind: VirtualAgentActionKind;
+  title: string;
+  description: string;
+  urgency: Urgency;
+}
+
+export interface VirtualAgentArticle {
+  id: string;
+  number: string;
+  title: string;
+}
+
+export interface VirtualAgentReply {
+  reply: string;
+  articles: VirtualAgentArticle[];
+  proposal?: VirtualAgentProposal | null;
+  toolsUsed: string[];
+}
+
+export interface VirtualAgentActionResult {
+  recordNumber: string;
+  recordId: string;
+}
