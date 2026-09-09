@@ -27,6 +27,16 @@ param sqlAdminGroupName string
 @description('Deploy Azure OpenAI and Azure AI Search. Turn off where the subscription has no AI quota.')
 param deployAiServices bool = true
 
+@description('''
+Deploy a distributed cache.
+
+Off below production on purpose. IApplicationCache falls back to an in-process cache when no
+connection string is present, which is correct for a single-replica environment and saves the
+cheapest Managed Redis tier's standing charge. Turn it on wherever more than one replica runs,
+because two replicas with private caches will disagree.
+''')
+param deployCache bool = environment == 'prod'
+
 @description('Deploy Front Door and API Management. Usually production only.')
 param deployEdgeServices bool = environment == 'prod'
 
@@ -77,7 +87,7 @@ var sizing = {
     sqlMaxSizeBytes: 34359738368
     sqlZoneRedundant: false
     sqlBackupStorage: 'Local'
-    redisSku: { name: 'Basic', family: 'C', capacity: 0 }
+    redisSku: 'Balanced_B0'
     serviceBusSku: 'Standard'
     apiMinReplicas: 0
     apiMaxReplicas: 2
@@ -90,7 +100,7 @@ var sizing = {
     sqlMaxSizeBytes: 68719476736
     sqlZoneRedundant: false
     sqlBackupStorage: 'Local'
-    redisSku: { name: 'Basic', family: 'C', capacity: 1 }
+    redisSku: 'Balanced_B0'
     serviceBusSku: 'Standard'
     apiMinReplicas: 1
     apiMaxReplicas: 3
@@ -103,7 +113,7 @@ var sizing = {
     sqlMaxSizeBytes: 137438953472
     sqlZoneRedundant: true
     sqlBackupStorage: 'Zone'
-    redisSku: { name: 'Standard', family: 'C', capacity: 1 }
+    redisSku: 'Balanced_B1'
     serviceBusSku: 'Standard'
     apiMinReplicas: 1
     apiMaxReplicas: 5
@@ -116,7 +126,7 @@ var sizing = {
     sqlMaxSizeBytes: 274877906944
     sqlZoneRedundant: true
     sqlBackupStorage: 'Geo'
-    redisSku: { name: 'Premium', family: 'P', capacity: 1 }
+    redisSku: 'Balanced_B3'
     serviceBusSku: 'Premium'
     apiMinReplicas: 2
     apiMaxReplicas: 20
@@ -213,13 +223,13 @@ module serviceBus 'modules/servicebus.bicep' = {
   }
 }
 
-module redis 'modules/redis.bicep' = {
+module redis 'modules/redis.bicep' = if (deployCache) {
   name: 'redis'
   params: {
     location: location
     tags: tags
     name: names.redis
-    sku: size.redisSku
+    skuName: size.redisSku
     keyVaultName: keyVault.outputs.name
     logAnalyticsWorkspaceId: observability.outputs.logAnalyticsId
   }

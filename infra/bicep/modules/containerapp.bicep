@@ -38,8 +38,25 @@ param memory string
 param environmentLabel string
 param zoneRedundant bool
 
-@description('Image tag to run. The pipeline overrides this on each deployment.')
-param imageTag string = 'latest'
+@description('''
+Full image reference to run, overriding the registry and tag.
+
+Exists to break a bootstrap deadlock: the container app cannot be created pointing at an image
+that does not exist, and the image cannot be pushed until the registry it goes to has been
+created. Provisioning therefore starts on a public placeholder, and the deploy pipeline replaces
+it with the real image on the first release.
+
+Leave empty in the pipeline, which supplies the registry and tag instead.
+''')
+param containerImage string = ''
+
+// Empty means nothing has been published to the registry yet, so provisioning starts on
+// Microsoft's own Container Apps sample: public, tiny, and obviously not this product, so an
+// environment left sitting on it is recognisable at a glance rather than looking like a broken
+// NexaOps.
+var effectiveImage = empty(containerImage)
+  ? 'mcr.microsoft.com/k8se/quickstart:latest'
+  : containerImage
 
 resource environment 'Microsoft.App/managedEnvironments@2024-03-01' = {
   name: environmentName
@@ -112,7 +129,7 @@ resource api 'Microsoft.App/containerApps@2024-03-01' = {
       containers: [
         {
           name: 'api'
-          image: '${registryLoginServer}/nexaops-api:${imageTag}'
+          image: effectiveImage
 
           resources: {
             cpu: json(cpu)

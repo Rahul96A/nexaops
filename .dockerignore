@@ -1,0 +1,49 @@
+# What must never enter the Docker build context.
+#
+# This file is not an optimisation. Without it, a build from a working directory uploads the
+# local obj/ folders, and those contain absolute NuGet paths from the machine that produced
+# them — 'C:\Program Files (x86)\Microsoft Visual Studio\Shared\NuGetPackages' on Windows. The
+# Linux build image cannot resolve that path and the publish step fails outright with
+# MSB4018 / "Unable to find fallback package folder".
+#
+# It is also what keeps the context small. node_modules alone is 271 MB and is rebuilt inside
+# the image anyway, so uploading it costs minutes per build and buys nothing.
+
+# --- Build output and restore state, per the failure above ---
+**/bin/
+**/obj/
+**/out/
+**/publish/
+
+# --- Front-end dependencies and build output ---
+**/node_modules/
+src/NexaOps.Web/dist/
+**/.vite/
+
+# --- Version control and CI ---
+.git/
+.gitignore
+.github/
+.vs/
+.vscode/
+.idea/
+
+# --- Test and coverage artefacts ---
+**/TestResults/
+**/coverage/
+**/*.trx
+
+# --- Local configuration that must never reach an image ---
+# appsettings.Development.json is excluded because it is the file most likely to acquire a real
+# connection string on somebody's machine. Deployed configuration comes from Key Vault and the
+# container app's environment, never from a file baked into the image.
+**/appsettings.Development.json
+**/appsettings.Local.json
+**/*.user
+**/.env
+**/.env.*
+
+# --- Documentation and infrastructure, which the image does not need ---
+docs/
+infra/
+*.md
