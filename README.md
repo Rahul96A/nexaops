@@ -10,9 +10,9 @@ material from, any commercial ITSM vendor.
 
 ## What is built
 
-This repository contains **Phase 1 (platform foundation), Incident Management, Service Request
-Management with a service catalogue and approvals, and a demo environment.** Everything listed
-below is implemented, tested, and runs.
+This repository contains **thirteen delivered phases** — the platform foundation, all ten service
+management modules, the AI surface, and platform administration — **plus a demo environment.**
+Everything listed below is implemented, tested, and runs.
 
 | Capability | State |
 |---|---|
@@ -32,6 +32,7 @@ below is implemented, tested, and runs.
 | Workflow automation: rules, run history, rule editor | Built, 12 integration tests |
 | Reporting: service desk, SLA, changes, requests, CSV export | Built, 15 integration tests |
 | Tenant administration: people, roles, groups, categories | Built, 18 integration tests |
+| Platform administration: onboard, configure and suspend customers | Built, 25 integration tests |
 | SLA engine with Indian business calendars, incidents and requests | Built, 32 tests |
 | Notifications (in-app + email dispatch) | Built |
 | Service desk dashboard, incident queue, record pages | Built |
@@ -40,11 +41,15 @@ below is implemented, tested, and runs.
 | Inbound email to incident, machine credentials | Built (API only), 18 integration + 12 unit tests |
 | Azure infrastructure as Bicep | Built, compiles clean |
 | CI/CD pipelines | Built |
-| Demo environment, 420 incidents across 2 tenants | Built |
+| Demo environment, 420 incidents across 2 customer tenants | Built |
 
 Every module in the navigation is built and clickable. What is not built is listed explicitly in
 the status report rather than shown as an empty screen — nothing in this product pretends to
 work.
+
+Two things worth knowing before you judge a fresh install: **only Incident Management is seeded**,
+so the other eleven modules open working but empty, and **attachments are not virus-scanned**, so
+do not accept files from untrusted users. Both are covered in the status report.
 
 **[See the full status report, including known limitations →](docs/STATUS.md)**
 
@@ -104,11 +109,14 @@ what a demo will show before you show it.
 
 ## Demo accounts
 
-Tenant **Acme Technologies India** (`acme-in`). Password for all accounts:
-`NexaOps#Demo2026`
+Three seeded tenants. Password for every account: `NexaOps#Demo2026`
+
+Most of these belong to **Acme Technologies India** (`acme-in`); the first is the service
+provider's own operator, and lives in a separate tenant.
 
 | Account | Role | What they can do |
 |---|---|---|
+| `nandini.iyer@nexaops.example.in` | Platform Operator (tenant `nexaops-platform`) | Onboard, configure and suspend customers |
 | `priya.raghavan@acmetech.example.in` | Tenant Administrator, IT Manager | Everything in the tenant |
 | `arun.mehta@acmetech.example.in` | Service Desk Manager | Queue, priority overrides, major incidents, SLA config, audit |
 | `kavya.nair@acmetech.example.in` | Service Desk Agent | Work the queue; no priority override, no audit |
@@ -119,6 +127,11 @@ Tenant **Acme Technologies India** (`acme-in`). Password for all accounts:
 A second tenant, **Northwind Logistics India** (`deepak.varma@northwind.example.in`), exists so
 tenant isolation can be demonstrated live rather than asserted. Sign in as an Acme agent and no
 Northwind record is reachable — by search, by direct URL, or through the AI assistant.
+
+A third tenant, **NexaOps** (`nandini.iyer@nexaops.example.in`), is the service provider's own.
+Its single user holds the platform-scoped role and sees a **Platform** section that no customer
+does — that is where a new customer is onboarded. Sign in as anyone at Acme and the section is
+absent rather than merely disabled, and the API refuses them independently.
 
 All demo data is synthetic. No real person's data is used.
 
@@ -136,9 +149,9 @@ src/
   NexaOps.Api/             HTTP surface, auth wiring, middleware, workers, seeding.
   NexaOps.Web/             React 19 + TypeScript + Vite + MUI front end.
 tests/
-  NexaOps.Domain.Tests/         308 tests. Pure domain rules.
-  NexaOps.Application.Tests/    31 tests. Use-case orchestration and the permission catalogue.
-  NexaOps.Api.IntegrationTests/ 173 tests. Real HTTP against real SQL Server.
+  NexaOps.Domain.Tests/         376 tests. Pure domain rules.
+  NexaOps.Application.Tests/    69 tests. Use-case orchestration and the permission catalogue.
+  NexaOps.Api.IntegrationTests/ 272 tests. Real HTTP against real SQL Server.
 infra/
   bicep/                   Azure infrastructure, four environments.
   scripts/                 Local development helpers.
@@ -177,7 +190,7 @@ dotnet test NexaOps.slnx                 # 717 tests
 cd src/NexaOps.Web && npm run typecheck   # clean
 cd src/NexaOps.Web && npm run lint        # clean
 cd src/NexaOps.Web && npm run test        # 38 tests
-cd src/NexaOps.Web && npm run build       # 274 KB gzipped
+cd src/NexaOps.Web && npm run build       # ~278 KB gzipped eager, routes code-split
 az bicep build --file infra/bicep/main.bicep   # 0 warnings
 ```
 
