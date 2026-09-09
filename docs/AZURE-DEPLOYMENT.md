@@ -219,6 +219,31 @@ credentials are Container Apps secrets. Notable values:
 Every adapter degrades honestly: an unset `Storage__BlobServiceUri` means attachments fall back
 to the local filesystem and say so, rather than failing at upload time.
 
+### Seeding a deployed environment
+
+`Demo__SeedOnStartup` is pinned to `false` in the Bicep, so a deployment never seeds by itself
+and re-running the pipeline cannot quietly re-create demo data over a real tenant. Seeding a
+fresh environment is therefore a deliberate two-step, and the second step matters:
+
+```bash
+az containerapp update -n ca-nexaops-dev-api -g rg-nexaops-dev --set-env-vars "Demo__SeedOnStartup=true"
+```
+
+Wait for the new revision to report healthy, confirm the data is there, then turn it back off:
+
+```bash
+az containerapp update -n ca-nexaops-dev-api -g rg-nexaops-dev --set-env-vars "Demo__SeedOnStartup=false"
+```
+
+The seeder is idempotent, so leaving the flag on would not duplicate data — but it is not free.
+It re-provisions both tenants on every start, deliberately, so that roles and permission grants
+stay current as new permissions are added; only the demo records themselves are skipped when they
+already exist. That is a meaningful amount of work to repeat on every cold start, and this
+environment cold-starts constantly. Turn it off.
+
+Only Incident Management is seeded. See [STATUS.md §2](STATUS.md) for what a freshly seeded
+environment does and does not contain.
+
 ---
 
 ## 7. Health and scaling
