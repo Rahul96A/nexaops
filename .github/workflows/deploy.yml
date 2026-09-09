@@ -89,12 +89,19 @@ jobs:
         run: |
           dotnet tool install --global dotnet-ef --version 10.0.11
           export PATH="$PATH:$HOME/.dotnet/tools"
+
+          # --output names the executable, not a directory. Written as ./migrate it produced a
+          # file called "migrate", while the deploy job looked for ./migrate-artifact/efbundle --
+          # so the artifact uploaded and downloaded perfectly and the next step failed on a name
+          # that had never existed.
+          mkdir -p ./migrate
+
           dotnet ef migrations bundle \
             --project src/NexaOps.Infrastructure/NexaOps.Infrastructure.csproj \
             --startup-project src/NexaOps.Infrastructure/NexaOps.Infrastructure.csproj \
             --configuration Release \
             --self-contained --target-runtime linux-x64 \
-            --output ./migrate --force
+            --output ./migrate/efbundle --force
 
       - name: Upload migration bundle
         uses: actions/upload-artifact@v4
