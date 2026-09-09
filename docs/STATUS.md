@@ -355,11 +355,14 @@ people report a problem is to email somebody about it.
 - Neither impact nor urgency is inferred from the wording. Guessing them would be a fabricated
   measurement; the tenant's matrix gives the default and the desk triages as it always has.
 
-**Not built:** attachments on inbound mail, outbound threading headers (replies from the product
-do not yet carry `References`, so client-side threading relies on the subject tag), a provider
-connector of any kind — the endpoint takes a parsed message, and wiring a specific provider's
-inbound parse webhook to it is configuration — outbound webhooks, a mobile client, and any
-third-party connector. Only incidents can be raised by email; requests cannot.
+**Not built:** a user interface. Keys are issued and revoked, and the ingestion history read,
+through the API only — so a customer can be set up by an implementer but not by themselves,
+which is the same gap the administration module closed for everything else. Also absent:
+attachments on inbound mail; outbound threading headers (replies from the product do not carry
+`References`, so a mail client threads on the subject tag alone); a provider connector of any
+kind — the endpoint takes a parsed message, and wiring a specific provider's inbound-parse
+webhook to it is configuration, not code; outbound webhooks; a mobile client; and any
+third-party connector. Only incidents can be raised by email — requests cannot.
 
 ### Knowledge Base — complete
 

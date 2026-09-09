@@ -37,7 +37,7 @@ below is implemented, tested, and runs.
 | Service desk dashboard, incident queue, record pages | Built |
 | AI abstraction, tool registry, grounded assistant | Built, 9 security tests |
 | Virtual agent: deflection, proposal, confirmed ticket | Built, 8 integration + 14 unit tests |
-| Inbound email to incident, machine credentials | Built, 18 integration + 12 unit tests |
+| Inbound email to incident, machine credentials | Built (API only), 18 integration + 12 unit tests |
 | Azure infrastructure as Bicep | Built, compiles clean |
 | CI/CD pipelines | Built |
 | Demo environment, 420 incidents across 2 tenants | Built |
