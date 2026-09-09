@@ -44,12 +44,36 @@ recorded server-side in the audit trail and the log.
 
 ### The security stamp
 
-Every user carries a `SecurityStamp`, rotated whenever credentials or role assignments change.
-The stamp is embedded in each access token and validated on every request against a
-60-second-cached lookup.
+Every user carries a `SecurityStamp`, rotated whenever credentials or role assignments change —
+a password change, a role granted or revoked, a sign-in address changed, an account disabled.
+The stamp is embedded in each access token and compared on every request.
 
 Without it, a token minted before a role was revoked would keep working for its full 30-minute
-lifetime. With it, a revocation takes effect within a minute.
+lifetime. With it, revocation takes effect on the caller's very next request.
+
+The verified stamp is cached for a minute to avoid a database read per request, and **every
+rotation site evicts that entry** — which is what keeps "immediately" true rather than "within a
+minute". That cache is deliberately separate from the general application cache: the general one
+prefixes keys by tenant, and stamp validation runs before a tenant scope exists, so an eviction
+written the obvious way would have looked correct and evicted a different key. See
+[STATUS.md §6](STATUS.md) — this was found by a test, not by review.
+
+### Machine credentials
+
+Integrations authenticate with a key rather than a person's token. The key is an authentication
+scheme, not a bypass: it produces the same shape of principal, so the tenant middleware, the
+permission attributes, `ICurrentUser`, the audit interceptor and the query filters all apply
+without knowing a machine is calling.
+
+| Property | Decision |
+|---|---|
+| Permissions | None of its own. It names a service account and holds exactly that account's roles, read fresh per call — so revoking a role, or disabling the account, cuts the key off at once |
+| Scope | Checked separately from permissions. A key issued for inbound email cannot be pointed elsewhere even if its account could go there |
+| Storage | SHA-256 of a 256-bit random value. Not recoverable; a lost key is replaced. A plain hash rather than a slow KDF is deliberate — there is no dictionary to run against 256 bits of randomness, and this verifies on every call |
+| Presentation | A header, never a query string. Query strings reach access logs, proxy logs and browser history |
+| Recognisability | An `nxk_` prefix, so secret scanners can spot a leaked key in a public repository |
+| Failure | An unknown key and a revoked key fail identically. Distinguishing them tells whoever is probing which of their guesses was once real |
+| Deletion | Revoked, never deleted. The identifier appears in the audit entries for everything the key did |
 
 ---
 

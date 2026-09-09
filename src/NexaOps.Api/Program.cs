@@ -98,7 +98,21 @@ if (authOptions.Mode == AuthMode.Local)
 }
 
 builder.Services
-    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    // A forwarding default rather than the bearer scheme directly.
+    //
+    // The tenant middleware runs immediately after UseAuthentication and reads the principal's
+    // tenant claim, so whichever credential a caller presents has to have been authenticated by
+    // then. With the bearer scheme as the default, a key-authenticated request reached that
+    // middleware anonymous — its scheme only ran later, inside the authorization filter — and
+    // arrived at the service with no tenant scope at all.
+    .AddAuthentication(NexaOpsAuthentication.DefaultScheme)
+    .AddPolicyScheme(NexaOpsAuthentication.DefaultScheme, NexaOpsAuthentication.DefaultScheme, options =>
+    {
+        options.ForwardDefaultSelector = context =>
+            context.Request.Headers.ContainsKey(NexaOpsAuthentication.KeyHeader)
+                ? IntegrationKeyAuthenticationHandler.SchemeName
+                : JwtBearerDefaults.AuthenticationScheme;
+    })
     .AddJwtBearer(options =>
     {
         options.MapInboundClaims = false;
@@ -184,6 +198,15 @@ builder.Services
             }
         };
     });
+
+// Machine callers. A second scheme rather than a bypass: an integration key produces the same
+// shape of principal a person's token does, so the tenant middleware, the permission attributes
+// and the query filters all apply to it without knowing it is not a person.
+builder.Services
+    .AddAuthentication()
+    .AddScheme<IntegrationKeyOptions, IntegrationKeyAuthenticationHandler>(
+        IntegrationKeyAuthenticationHandler.SchemeName,
+        _ => { });
 
 builder.Services.AddScoped<SecurityStampValidator>();
 
@@ -341,6 +364,26 @@ builder.Services.AddRateLimiter(options =>
                 PermitLimit = rateLimits.AuthenticationAttempts,
                 Window = TimeSpan.FromMinutes(rateLimits.AuthenticationWindowMinutes),
                 QueueLimit = 0
+            }));
+
+    // Inbound integration traffic, partitioned by key rather than by address: a mail provider
+    // delivers from a pool of addresses, so limiting by IP would either throttle one tenant's
+    // traffic because of another's or fail to limit anything at all.
+    options.AddPolicy("integration", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Items.TryGetValue("IntegrationKeyId", out var keyId)
+                ? keyId?.ToString() ?? "unknown"
+                : "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = rateLimits.IntegrationRequestsPerMinute,
+                Window = TimeSpan.FromMinutes(1),
+
+                // A short queue rather than none: a provider delivering a burst after an outage
+                // is normal traffic, and rejecting it outright would lose mail rather than
+                // slowing it.
+                QueueLimit = 20,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst
             }));
 
     options.AddPolicy("ai", context =>

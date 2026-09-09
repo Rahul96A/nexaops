@@ -39,4 +39,14 @@ public sealed class RateLimitOptions
     /// </summary>
     [Range(1, 10_000)]
     public int AiRequestsPerMinute { get; set; } = 20;
+
+    /// <summary>
+    /// Inbound integration deliveries allowed per key per minute.
+    /// <para>
+    /// Generous, because the traffic is a mail provider forwarding real mail rather than a
+    /// person clicking: a busy tenant can legitimately receive hundreds in a burst after an
+    /// outage. The limit exists to bound a runaway loop, not to shape normal volume.
+    /// </para>
+    /// </summary>
+    public int IntegrationRequestsPerMinute { get; set; } = 300;
 }

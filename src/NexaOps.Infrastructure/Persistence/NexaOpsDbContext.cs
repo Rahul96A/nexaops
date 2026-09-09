@@ -8,6 +8,7 @@ using NexaOps.Domain.Changes;
 using NexaOps.Domain.Cmdb;
 using NexaOps.Domain.Common;
 using NexaOps.Domain.Identity;
+using NexaOps.Domain.Integration;
 using NexaOps.Domain.Knowledge;
 using NexaOps.Domain.Platform;
 using NexaOps.Domain.Problems;
@@ -229,6 +230,10 @@ public class NexaOpsDbContext : DbContext
     public DbSet<WorkflowAction> WorkflowActions => Set<WorkflowAction>();
     public DbSet<WorkflowRun> WorkflowRuns => Set<WorkflowRun>();
     public DbSet<WorkflowStepRun> WorkflowStepRuns => Set<WorkflowStepRun>();
+
+    // --- Integration ---
+    public DbSet<IntegrationKey> IntegrationKeys => Set<IntegrationKey>();
+    public DbSet<InboundMessage> InboundMessages => Set<InboundMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

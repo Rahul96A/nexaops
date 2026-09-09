@@ -37,6 +37,7 @@ below is implemented, tested, and runs.
 | Service desk dashboard, incident queue, record pages | Built |
 | AI abstraction, tool registry, grounded assistant | Built, 9 security tests |
 | Virtual agent: deflection, proposal, confirmed ticket | Built, 8 integration + 14 unit tests |
+| Inbound email to incident, machine credentials | Built, 18 integration + 12 unit tests |
 | Azure infrastructure as Bicep | Built, compiles clean |
 | CI/CD pipelines | Built |
 | Demo environment, 420 incidents across 2 tenants | Built |
@@ -172,7 +173,7 @@ Every one of these passes on the current tree:
 
 ```bash
 dotnet build NexaOps.slnx -warnaserror   # 0 warnings, 0 errors
-dotnet test NexaOps.slnx                 # 642 tests
+dotnet test NexaOps.slnx                 # 692 tests
 cd src/NexaOps.Web && npm run typecheck   # clean
 cd src/NexaOps.Web && npm run lint        # clean
 cd src/NexaOps.Web && npm run test        # 38 tests

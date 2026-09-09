@@ -4,8 +4,8 @@
 (Service Requests, Service Catalogue and Approvals) Phase 3 (Problem Management), Phase 4
 (Change Management and the CAB) Phase 5 (Knowledge Base), Phase 6 (CMDB),
 Phase 7 (Asset Management), Phase 8 (workflow automation), Phase 9 (reporting) and
-Phase 10 (tenant administration) and Phase 11 (the virtual agent), plus a demo
-environment.
+Phase 10 (tenant administration), Phase 11 (the virtual agent) and Phase 12 (the
+integration surface), plus a demo environment.
 
 This document is written to be handed to someone who has to decide whether to rely on this. It
 lists what works, what does not, and what is deliberately absent — with the gaps in the same
@@ -18,7 +18,7 @@ detail as the achievements.
 | Gate | Result |
 |---|---|
 | `dotnet build NexaOps.slnx -warnaserror` | **0 warnings, 0 errors** |
-| `dotnet test NexaOps.slnx` | **642 passing** |
+| `dotnet test NexaOps.slnx` | **692 passing** |
 | `npm run typecheck` | Clean |
 | `npm run lint` | Clean |
 | `npm run test` | **38 passing** |
@@ -28,7 +28,7 @@ detail as the achievements.
 | `npm audit` | No advisories |
 | gitleaks (full history) | No secrets |
 
-680 tests total (344 domain, 69 application, 229 integration, 38 front end). Breakdown and
+730 tests total (376 domain, 69 application, 247 integration, 38 front end). Breakdown and
 strategy in [TESTING.md](TESTING.md).
 
 > Two of these gates were previously reported as passing when they were not. `dotnet build`
@@ -312,6 +312,55 @@ a ticket.
 instead), cannot chase or update an existing ticket, and has no voice or third-party chat channel.
 Conversation history lives in the browser for the length of the session and is not stored.
 
+### Integration surface — inbound email and machine credentials
+
+The oldest integration in ITSM, and still the one customers ask for first, because the way most
+people report a problem is to email somebody about it.
+
+- **A key is an authentication scheme, not a bypass.** It produces the same shape of principal a
+  person's token does, so the tenant middleware, the permission attributes, `ICurrentUser`, the
+  audit interceptor and the query filters all apply to it without knowing a machine is calling.
+  A separate path for machines is a second set of rules, and the second set is always the one
+  with the hole in it.
+- **A key carries no permissions of its own.** It names a service account and holds exactly that
+  account's roles, read fresh on every call — so a role removed from the account takes effect
+  immediately, and disabling the account cuts off every key that acts as it.
+- **A key's scope is checked separately from its permissions.** One issued for inbound email
+  cannot be pointed elsewhere even if its service account could go there. Keys leak into scripts
+  and CI logs; a leaked key that can do one thing is a smaller problem.
+- **The secret is returned once and stored as a hash.** Not recoverable, so a key nobody wrote
+  down must be replaced — the correct cost of a credential having one owner. It carries an
+  `nxk_` prefix so secret scanners can recognise a leaked one.
+- **An unknown key and a revoked key fail identically.** Distinguishing them tells whoever is
+  probing which of their guesses was once real.
+- **Delivery is idempotent on the Message-ID**, enforced by a unique index rather than only by a
+  check — two racing deliveries both pass a check, and only one can win an index. Providers
+  retry, and a retry that raised a second ticket would be the most visible possible failure.
+- **Threading uses two signals in order of trust.** `In-Reply-To` is set by the sending client
+  and is strong. A bracketed number in the subject is weak, so the record is looked up and used
+  only if it exists in the caller's own tenant. Note what that promises: record numbers are
+  unique per tenant, not globally, so a neighbour's number often is also a real local one — the
+  guarantee is that whatever matches is yours, not that such a subject fails to match.
+- **A closed ticket is not reopened by a reply.** Reopening has its own permission and its own
+  reason field, and an email can supply neither, so the reply becomes a new ticket the desk can
+  link.
+- **Automated mail never becomes a ticket.** Out-of-office replies, bounces and list traffic are
+  recognised by header. Two auto-replies answering each other is the classic mail loop, and a
+  desk that raises a ticket for every bounce fills its own queue overnight.
+- **An unknown sender is ignored, not accepted.** An open mailbox raising tickets for any address
+  on the internet is a spam target, and the ticket would have no requester anybody could reply
+  to.
+- **Everything that arrives is recorded, including what was ignored,** with the reason. "I
+  emailed the service desk and nothing happened" is the question this module gets asked.
+- Neither impact nor urgency is inferred from the wording. Guessing them would be a fabricated
+  measurement; the tenant's matrix gives the default and the desk triages as it always has.
+
+**Not built:** attachments on inbound mail, outbound threading headers (replies from the product
+do not yet carry `References`, so client-side threading relies on the subject tag), a provider
+connector of any kind — the endpoint takes a parsed message, and wiring a specific provider's
+inbound parse webhook to it is configuration — outbound webhooks, a mobile client, and any
+third-party connector. Only incidents can be raised by email; requests cannot.
+
 ### Knowledge Base — complete
 
 - **A stale article stays readable.** Withdrawing guidance the moment its review date passes
@@ -549,9 +598,9 @@ detail in [SECURITY.md §7](SECURITY.md) and [TESTING.md §9](TESTING.md).
 
 ## 7. Next implementation phase
 
-**Recommended: finishing the administration surface, then the integration surface.**
+**Recommended: finishing the administration surface, then outbound integration.**
 
-Eleven modules exist and a tenant can now be configured through the product for the things that
+Twelve modules exist and a tenant can now be configured through the product for the things that
 matter most — people, roles, teams and the taxonomy. What is left of administration is narrower
 but still forces a developer into the loop: SLA definitions, business calendars and holidays, and
 system settings.
@@ -560,7 +609,8 @@ Still to build, in the order they earn their place:
 
 1. **The rest of administration** — SLA definitions, calendars and holidays, system settings,
    organisations and departments, subcategory editing.
-2. **Integration surface** — inbound email, a mobile client, third-party connectors.
+2. **The rest of the integration surface** — outbound webhooks, attachments on inbound mail,
+   provider connectors, a mobile client.
 4. **Scheduled and outcome-driven workflow triggers** — a timer, an approval outcome, an SLA
    breach. The engine's shape supports them; the triggers are not raised yet.
 5. **Scheduled and emailed reports**, and a report builder.

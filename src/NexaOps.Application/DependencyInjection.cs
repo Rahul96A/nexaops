@@ -13,6 +13,7 @@ using NexaOps.Application.Requests;
 using NexaOps.Application.Sla;
 using NexaOps.Application.Workflows;
 using NexaOps.Application.Reporting;
+using NexaOps.Application.Integration;
 
 namespace NexaOps.Application;
 
@@ -50,6 +51,10 @@ public static class DependencyInjection
         services.AddScoped<IUserAdminService, UserAdminService>();
         services.AddScoped<IRoleAdminService, RoleAdminService>();
         services.AddScoped<ITaxonomyAdminService, TaxonomyAdminService>();
+
+        // Integration: what arrives from outside, and the credentials that let it in.
+        services.AddScoped<IInboundEmailService, InboundEmailService>();
+        services.AddScoped<IIntegrationKeyService, IntegrationKeyService>();
 
         // Reporting.
         services.AddScoped<IReportService, ReportService>();

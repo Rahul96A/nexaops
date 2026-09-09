@@ -298,6 +298,20 @@ public static class Permissions
     public const string LicenceManage = "licence.manage";
 
     // ---------------------------------------------------------------
+    // Integration
+    // ---------------------------------------------------------------
+
+    /// <summary>
+    /// Issue and revoke machine credentials, and read what has arrived from outside.
+    /// <para>
+    /// Narrowly held, and deliberately not part of user administration. A key acts as a service
+    /// account without a person behind it, so issuing one is closer to granting a role than to
+    /// maintaining a directory.
+    /// </para>
+    /// </summary>
+    public const string IntegrationManage = "integration.manage";
+
+    // ---------------------------------------------------------------
     // Workflow
     // ---------------------------------------------------------------
 
@@ -470,6 +484,8 @@ public static class Permissions
         new(AssetDispose, "Asset", "Dispose of assets", "Dispose of or write off an asset."),
         new(LicenceRead, "Asset", "View licences", "Read software licence agreements and compliance."),
         new(LicenceManage, "Asset", "Manage licences", "Maintain licence agreements and deployment counts."),
+
+        new(IntegrationManage, "Integration", "Manage integrations", "Issue and revoke machine credentials, and read inbound message history."),
 
         new(WorkflowRead, "Workflow", "View automation rules", "Read automation rules and their run history."),
         new(WorkflowManage, "Workflow", "Manage automation rules", "Create, edit and activate automation rules."),

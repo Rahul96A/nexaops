@@ -24,6 +24,7 @@ using NexaOps.Application.Notifications;
 using NexaOps.Application.Sla;
 using NexaOps.Application.Workflows;
 using NexaOps.Application.Reporting;
+using NexaOps.Application.Integration;
 using NexaOps.Domain.Identity;
 using NexaOps.Infrastructure.Ai;
 using NexaOps.Infrastructure.Caching;
@@ -156,6 +157,11 @@ public static class DependencyInjection
         // Administration.
         services.AddScoped<IAdministrationRepository, AdministrationRepository>();
         services.AddScoped<IAdministrationQueryService, AdministrationQueryService>();
+
+        // Integration.
+        services.AddScoped<IInboundEmailRepository, InboundEmailRepository>();
+        services.AddScoped<IIntegrationDirectory, IntegrationDirectory>();
+        services.AddScoped<IIntegrationKeyRepository, IntegrationKeyRepository>();
 
         // Reporting.
         services.AddScoped<IReportQueryService, ReportQueryService>();
