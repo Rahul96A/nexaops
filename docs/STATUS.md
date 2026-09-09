@@ -461,17 +461,31 @@ bundles, staged rollout behind a protected environment, smoke tests, and automat
 420 incidents across 2 tenants, 18 users, 6 groups, 5 offices, 30 realistic Indian-enterprise
 scenarios. Deterministic seed. Every figure computed by the real engine.
 
-**The catalogue is not seeded.** A fresh demo starts with no catalogue items, so requests cannot
-be demonstrated until some are created through the API.
+**Only Incident Management is seeded.** The seeder builds tenants, users, groups, offices, the
+category taxonomy and 420 incidents with their comments and SLA clocks. It does not build
+catalogue items, service requests, problems, changes, assets, configuration items, knowledge
+articles or workflow definitions — a freshly deployed environment shows those eleven modules
+working but empty, and each has to be exercised by creating records through the UI or the API.
+
+That is a real limitation of the demo, not of the modules: the endpoints, permissions, tenancy
+and audit behind each of them are covered by the test suite. But anyone expecting to open a
+fresh deployment and find a populated CMDB will not.
 
 ---
 
-## 3. Deliberately not built in this phase
+## 3. Deliberately not built
 
-These appear in the navigation marked **"Later"** and are not clickable. Nothing pretends to work.
+Nothing in the navigation is marked "Later" any more: every entry leads to a working page. The
+`comingSoon` marker survives in `AppShell.tsx` for the next module that needs it, and no item
+currently sets it. Earlier revisions of this section listed the workflow engine, reporting,
+settings, the virtual agent and inbound email as absent; Phases 8 to 12 built all five.
 
-The visual workflow engine, reporting and dashboard builder, settings, virtual agent, mobile
-apps, inbound email, third-party integrations.
+What is genuinely absent:
+
+- **A user interface for the integration surface.** Inbound email and machine credentials are
+  API-only. Issuing an integration key means calling the API.
+- **Mobile applications.** The web UI is responsive; there is no native client.
+- **Outbound webhooks and provider connectors.**
 
 Problems and Changes have list and record pages; neither has a create form in the UI yet, so
 raising one goes through the API. Every other operation on them is available in the browser.

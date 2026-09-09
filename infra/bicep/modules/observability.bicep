@@ -6,6 +6,9 @@ param logAnalyticsName string
 param appInsightsName string
 param retentionInDays int
 
+@description('Daily ingestion ceiling in GB, given as a string because Bicep has no floating-point type and the smallest cap Azure accepts is a tenth of a gigabyte. Minus one means uncapped, which is what an environment carrying real traffic wants.')
+param dailyQuotaGb string = '-1'
+
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: logAnalyticsName
   location: location
@@ -13,6 +16,14 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   properties: {
     sku: { name: 'PerGB2018' }
     retentionInDays: retentionInDays
+
+    // A ceiling on ingestion, not a target. Set for the free dev profile so that a crash loop
+    // writing stack traces cannot quietly spend money; ingestion stops for the rest of the day
+    // once the cap is hit, which is a deliberate trade of observability for a predictable bill.
+    // An environment with real traffic passes -1 and gets no cap.
+    workspaceCapping: {
+      dailyQuotaGb: json(dailyQuotaGb)
+    }
     features: {
       enableLogAccessUsingOnlyResourcePermissions: true
     }

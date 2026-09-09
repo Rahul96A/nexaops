@@ -269,11 +269,13 @@ the browser rather than opening the API to every origin.
 ## 10. Cost
 
 Rough monthly order of magnitude in Central India, excluding AI token consumption and egress.
-Verify against the Azure pricing calculator before quoting anyone.
+Verify against the Azure pricing calculator before quoting anyone; the free grants below are
+Azure's own terms and can change, so treat this as a description of what the templates deploy
+rather than a promise about a bill.
 
 | Environment | Approximate |
 |---|---|
-| dev | Low — SQL serverless auto-pauses, API scales to zero |
+| dev | Designed to sit inside Azure's free grants — see below |
 | test | Modest |
 | stg | Moderate — zone redundancy is the step up |
 | prod | Dominated by Business Critical SQL, then Front Door Premium, then Redis Premium |
@@ -281,6 +283,32 @@ Verify against the Azure pricing calculator before quoting anyone.
 The largest single lever is the SQL tier. Business Critical is chosen for the RTO, not for
 throughput; a customer accepting a longer recovery time can drop to General Purpose and save
 most of the bill.
+
+### The dev profile
+
+`parameters/dev.bicepparam` is deliberately the cheapest thing that still exercises the whole
+product. Every optional dependency is switched off, and each one that remains is sized to fall
+inside a free grant:
+
+| Resource | Setting | Why it costs nothing |
+|---|---|---|
+| Azure SQL | `useSqlFreeLimit: true`, serverless | The free offer grants a monthly vCore and storage allowance. `freeLimitExhaustionBehavior` is `AutoPause`, so exhausting it stops the database rather than starting to bill. |
+| Container Apps | `minReplicas: 0` | The Consumption plan grants free vCPU-seconds and GiB-seconds per subscription each month. Scaled to zero, an idle environment consumes none of it. |
+| Log Analytics | daily cap `0.1 GB`, 30-day retention | Ingestion runs around 4 MB/day, far inside both the cap and the monthly free grant. The cap is insurance against a crash loop, not a target. |
+| Container registry | `deployRegistry: false` | Images are built and pulled from GitHub Container Registry, which is free for public packages. |
+| Service Bus | `deployMessaging: false` | Nothing inside the product consumes it. **This is a real reduction in function, not a free lunch:** outbound integration events are not published, and each one is logged at warning instead. An environment that has to notify an external system needs `deployMessaging: true`. |
+| Redis | `deployCache: false` | The cache falls back to in-memory, which is correct for a single replica. |
+| AI services | `deployAiServices: false` | The AI features degrade to unavailable rather than fake, so the app is honest with no model deployed. |
+| Front Door / WAF | `deployEdgeServices: false` | Container Apps ingress terminates TLS directly. There is no WAF in front of dev. |
+
+What genuinely still bills, at a few rupees a month: the storage account holding attachments,
+Key Vault operations, and Application Insights beyond the free grant. Managed identity is free.
+
+Two consequences you should expect rather than debug:
+
+- **The first request after an idle period is slow.** The container is scaled to zero and the
+  database may be paused; the two cold starts are serial. Ten to sixty seconds is normal.
+- **There is no WAF and no private networking in dev.** Do not put customer data in it.
 
 ---
 

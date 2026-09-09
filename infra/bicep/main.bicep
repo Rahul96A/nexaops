@@ -130,6 +130,7 @@ var sizing = {
     apiCpu: '0.5'
     apiMemory: '1Gi'
     logRetentionDays: 30
+    logDailyQuotaGb: '0.1'
   }
   test: {
     sqlSku: { name: 'GP_S_Gen5_2', tier: 'GeneralPurpose', capacity: 2 }
@@ -143,6 +144,7 @@ var sizing = {
     apiCpu: '0.5'
     apiMemory: '1Gi'
     logRetentionDays: 30
+    logDailyQuotaGb: '-1'
   }
   stg: {
     sqlSku: { name: 'GP_Gen5_2', tier: 'GeneralPurpose', capacity: 2 }
@@ -156,6 +158,7 @@ var sizing = {
     apiCpu: '1.0'
     apiMemory: '2Gi'
     logRetentionDays: 60
+    logDailyQuotaGb: '-1'
   }
   prod: {
     sqlSku: { name: 'BC_Gen5_4', tier: 'BusinessCritical', capacity: 4 }
@@ -169,6 +172,7 @@ var sizing = {
     apiCpu: '2.0'
     apiMemory: '4Gi'
     logRetentionDays: 365
+    logDailyQuotaGb: '-1'
   }
 }
 
@@ -186,6 +190,7 @@ module observability 'modules/observability.bicep' = {
     logAnalyticsName: names.logAnalytics
     appInsightsName: names.appInsights
     retentionInDays: size.logRetentionDays
+    dailyQuotaGb: size.logDailyQuotaGb
   }
 }
 
