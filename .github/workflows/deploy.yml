@@ -1,8 +1,12 @@
 name: Deploy
 
-# Promotion pipeline. Staging deploys automatically from main; production requires a manual
-# approval on a protected environment, so no change reaches customers without a person
-# deciding it should.
+# Promotion pipeline.
+#
+# main deploys to dev automatically. Staging and production are manual only: their resource
+# groups are not provisioned and the pipeline's identity has no permission outside dev, so an
+# automatic run would fail every time and, if the permissions were widened, would silently
+# provision very expensive infrastructure. Promotion is therefore an explicit act -- run the
+# workflow by hand and choose the environment.
 on:
   push:
     branches: [main]
@@ -123,14 +127,14 @@ jobs:
             VERSION=${{ steps.version.outputs.tag }}
 
   # ---------------------------------------------------------------------------
-  staging:
-    name: Deploy to staging
+  dev:
+    name: Deploy to dev
     runs-on: ubuntu-latest
     timeout-minutes: 45
     needs: [build]
-    if: github.ref == 'refs/heads/main' || inputs.environment == 'stg'
+    if: github.ref == 'refs/heads/main' || inputs.environment == 'dev'
     environment:
-      name: staging
+      name: dev
       url: ${{ steps.deploy.outputs.publicUrl }}
 
     steps:
@@ -148,19 +152,36 @@ jobs:
       - name: Preview infrastructure changes
         run: |
           az deployment group what-if \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP_PREFIX }}-stg \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP_PREFIX }}-dev \
             --template-file infra/bicep/main.bicep \
-            --parameters infra/bicep/parameters/stg.bicepparam \
+            --parameters infra/bicep/parameters/dev.bicepparam \
             --parameters sqlAdminGroupObjectId=${{ secrets.SQL_ADMIN_GROUP_OBJECT_ID }}
+
+      # The image currently running, so the infrastructure deployment leaves it alone.
+      #
+      # Without this the template resets the container app to its bootstrap placeholder, and the
+      # site serves Microsoft's sample page for the minute between this step and the release
+      # step below. Empty on a first deployment, which is exactly when the placeholder is the
+      # right answer.
+      - name: Read the running image
+        id: current
+        run: |
+          image=$(az containerapp show \
+            --name ca-nexaops-dev-api \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP_PREFIX }}-dev \
+            --query 'properties.template.containers[0].image' -o tsv 2>/dev/null || true)
+
+          echo "image=${image}" >> "$GITHUB_OUTPUT"
 
       - name: Deploy infrastructure
         id: deploy
         run: |
           outputs=$(az deployment group create \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP_PREFIX }}-stg \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP_PREFIX }}-dev \
             --template-file infra/bicep/main.bicep \
-            --parameters infra/bicep/parameters/stg.bicepparam \
+            --parameters infra/bicep/parameters/dev.bicepparam \
             --parameters sqlAdminGroupObjectId=${{ secrets.SQL_ADMIN_GROUP_OBJECT_ID }} \
+            --parameters containerImage='${{ steps.current.outputs.image }}' \
             --query properties.outputs -o json)
 
           echo "publicUrl=$(echo "$outputs" | jq -r .publicUrl.value)" >> "$GITHUB_OUTPUT"
@@ -174,6 +195,24 @@ jobs:
           name: migration-bundle-${{ needs.build.outputs.imageTag }}
           path: ./migrate-artifact
 
+      # A GitHub runner is not an Azure service, so the "allow Azure services" rule does not
+      # cover it and its address is refused by the SQL firewall. The runner opens a rule for its
+      # own address only, for the length of this job, and closes it again below -- including
+      # when the migration fails, which is the case that matters.
+      - name: Open the SQL firewall for this runner
+        id: firewall
+        run: |
+          runner_ip=$(curl -s --max-time 30 https://api.ipify.org)
+          echo "rule=gh-${{ github.run_id }}" >> "$GITHUB_OUTPUT"
+
+          az sql server firewall-rule create \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP_PREFIX }}-dev \
+            --server "$(echo '${{ steps.deploy.outputs.sqlServerFqdn }}' | cut -d. -f1)" \
+            --name "gh-${{ github.run_id }}" \
+            --start-ip-address "$runner_ip" \
+            --end-ip-address "$runner_ip" \
+            --output none
+
       # Migrations are applied as an explicit, reviewable step before the new image is released.
       # A replica restarting must never change the schema on its own.
       - name: Apply database migrations
@@ -182,11 +221,20 @@ jobs:
           ./migrate-artifact/efbundle \
             --connection "Server=tcp:${{ steps.deploy.outputs.sqlServerFqdn }},1433;Database=${{ steps.deploy.outputs.sqlDatabaseName }};Authentication=Active Directory Default;Encrypt=True;"
 
+      - name: Close the SQL firewall
+        if: always() && steps.firewall.outputs.rule != ''
+        run: |
+          az sql server firewall-rule delete \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP_PREFIX }}-dev \
+            --server "$(echo '${{ steps.deploy.outputs.sqlServerFqdn }}' | cut -d. -f1)" \
+            --name "${{ steps.firewall.outputs.rule }}" \
+            --output none
+
       - name: Release the new image
         run: |
           az containerapp update \
             --name ${{ steps.deploy.outputs.containerAppName }} \
-            --resource-group ${{ env.AZURE_RESOURCE_GROUP_PREFIX }}-stg \
+            --resource-group ${{ env.AZURE_RESOURCE_GROUP_PREFIX }}-dev \
             --image ${{ secrets.ACR_NAME }}.azurecr.io/nexaops-api:${{ needs.build.outputs.imageTag }}
 
       - name: Smoke test
@@ -222,8 +270,13 @@ jobs:
     name: Deploy to production
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [build, staging]
-    if: github.ref == 'refs/heads/main' || inputs.environment == 'prod'
+    needs: [build]
+
+    # Manual only. Never triggered by a push: rg-nexaops-prod does not exist and the pipeline's
+    # identity has no permission to create it, so an automatic attempt would fail on every
+    # commit. Approving this once provisions Business Critical SQL, Premium Redis, Front Door
+    # and API Management, which is a deliberate decision rather than a side effect of merging.
+    if: inputs.environment == 'prod'
 
     # Protected environment with required reviewers. This is the manual gate: the job waits
     # here until a human approves it, and nothing reaches customers before that.

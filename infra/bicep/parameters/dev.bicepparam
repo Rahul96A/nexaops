@@ -1,7 +1,11 @@
 using '../main.bicep'
 
-// Development. Serverless SQL that auto-pauses, no edge services, and AI on so the assistant
-// can be exercised against a real provider.
+// Development. Serverless SQL that auto-pauses, no edge services, no cache, and AI off.
+//
+// AI is off because Azure OpenAI needs model quota that a new subscription does not have, and
+// Azure AI Search Basic is the single largest line item in this environment. With it off the
+// assistant and the virtual agent report themselves unconfigured, which is their designed
+// behaviour -- they never fabricate an answer. Turn it on once quota is granted.
 param environment = 'dev'
 param location = 'centralindia'
 param workload = 'nexaops'
@@ -11,5 +15,5 @@ param workload = 'nexaops'
 param sqlAdminGroupObjectId = '00000000-0000-0000-0000-000000000000'
 param sqlAdminGroupName = 'NexaOps SQL Administrators'
 
-param deployAiServices = true
+param deployAiServices = false
 param deployEdgeServices = false
